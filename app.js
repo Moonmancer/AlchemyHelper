@@ -792,6 +792,26 @@ function App() {
   const [sessionStep3ExpandedRecipes, setSessionStep3ExpandedRecipes] =
     useState(() => new Set());
   const [sessionDeliveryTab, setSessionDeliveryTab] = useState([]);
+  const [sessionDragIdx, setSessionDragIdx] = useState(null);
+  const [sessionDragOverIdx, setSessionDragOverIdx] = useState(null);
+  const [sessionCraftPicker, setSessionCraftPicker] = useState(null);
+  const sessionReorderRecipes = (fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    setSessionRecipes((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, item);
+      return next;
+    });
+    setSessionAgents((prev) => {
+      const next = [...prev];
+      while (next.length <= Math.max(fromIdx, toIdx)) next.push(null);
+      const [item] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, item);
+      return next;
+    });
+    setSessionActiveIdx(toIdx);
+  };
   const [copiedNaviKey, setCopiedNaviKey] = useState(null);
   const [ocrState, setOcrState] = useState(null); // null | 'loading' | 'noimage' | 'error' | {found: N}
   const [ocrAmbiguous, setOcrAmbiguous] = useState(null); // null | { list: [{text, matches}], idx }
@@ -4495,7 +4515,31 @@ function App() {
                         {
                           key: entry.recipeId,
                           onClick: () => sessionSelectRecipeSlot(idx),
-                          className: `flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-bold transition-all ${isActive ? (recipeValid ? "bg-indigo-600 border-indigo-500 text-white" : "bg-red-600 border-red-500 text-white ring-2 ring-red-400 ring-offset-1") : recipeValid ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400" : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 hover:border-red-500"}`,
+                          draggable: true,
+                          onDragStart: (e) => {
+                            setSessionDragIdx(idx);
+                            e.dataTransfer.effectAllowed = "move";
+                          },
+                          onDragOver: (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            setSessionDragOverIdx(idx);
+                          },
+                          onDragLeave: () => setSessionDragOverIdx(null),
+                          onDrop: (e) => {
+                            e.preventDefault();
+                            if (sessionDragIdx !== null) sessionReorderRecipes(sessionDragIdx, idx);
+                            setSessionDragIdx(null);
+                            setSessionDragOverIdx(null);
+                          },
+                          onDragEnd: () => {
+                            setSessionDragIdx(null);
+                            setSessionDragOverIdx(null);
+                          },
+                          className: `flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-bold transition-all cursor-grab active:cursor-grabbing ${sessionDragOverIdx === idx && sessionDragIdx !== idx
+                            ? "ring-2 ring-indigo-400 ring-offset-1 scale-105"
+                            : ""
+                            } ${isActive ? (recipeValid ? "bg-indigo-600 border-indigo-500 text-white" : "bg-red-600 border-red-500 text-white ring-2 ring-red-400 ring-offset-1") : recipeValid ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400" : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 hover:border-red-500"}`,
                         },
                             /*#__PURE__*/ React.createElement(ItemIcon, {
                           id: recipe?.matchedRecipeId ?? recipe?.id,
@@ -4582,193 +4626,236 @@ function App() {
                               return "border-yellow-300 dark:border-yellow-700/60 bg-yellow-50 dark:bg-yellow-900/25";
                             return "border-blue-300 dark:border-blue-700/60 bg-blue-50 dark:bg-blue-900/25";
                           })();
+                          const craftableRecipes = slot
+                            ? [...RECIPES, ...customRecipes].filter(
+                              (r) => r.product === slot.name,
+                            )
+                            : [];
+                          const showCraftPlus =
+                            Object.keys(parsedLager).length > 0 &&
+                            slot &&
+                            lagerAmt === 0 &&
+                            craftableRecipes.length > 0;
                           return /*#__PURE__*/ React.createElement(
-                            "button",
-                            {
-                              key: slotIdx,
-                              onClick: () => {
-                                if (
-                                  _sessionSwapLastSlot.current !== slotIdx
-                                ) {
-                                  _sessionSwapOriginalRef.current =
-                                    slot ?? null;
-                                  _sessionSwapLastSlot.current = slotIdx;
-                                }
-                                setSessionSwapOriginalItem(
-                                  _sessionSwapOriginalRef.current,
-                                );
-                                setSessionSwapSlotIndex(slotIdx);
-                                const _ms = slot
-                                  ? Math.max(
-                                    slot.fire,
-                                    slot.earth,
-                                    slot.air,
-                                    slot.water,
-                                  )
-                                  : 0;
-                                setSessionSwapElementFilter(
-                                  _ms > 0
-                                    ? slot.fire === _ms
-                                      ? "fire"
-                                      : slot.earth === _ms
-                                        ? "earth"
-                                        : slot.air === _ms
-                                          ? "air"
-                                          : "water"
-                                    : null,
-                                );
-                              },
-                              className: `relative rounded-xl border-2 p-2.5 flex flex-col gap-1.5 text-left transition-all hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1 group ${slotBg}`,
-                            },
-                                  /*#__PURE__*/ React.createElement(
-                              "div",
+                            "div",
+                            { key: slotIdx, className: "relative" },
+                            /*#__PURE__*/ React.createElement(
+                              "button",
                               {
-                                className:
-                                  "flex items-center justify-between",
-                              },
-                                    /*#__PURE__*/ React.createElement(
-                                "span",
-                                {
-                                  className:
-                                    "text-[10px] font-bold text-slate-400 uppercase",
+                                onClick: () => {
+                                  if (
+                                    _sessionSwapLastSlot.current !== slotIdx
+                                  ) {
+                                    _sessionSwapOriginalRef.current =
+                                      slot ?? null;
+                                    _sessionSwapLastSlot.current = slotIdx;
+                                  }
+                                  setSessionSwapOriginalItem(
+                                    _sessionSwapOriginalRef.current,
+                                  );
+                                  setSessionSwapSlotIndex(slotIdx);
+                                  const _ms = slot
+                                    ? Math.max(
+                                      slot.fire,
+                                      slot.earth,
+                                      slot.air,
+                                      slot.water,
+                                    )
+                                    : 0;
+                                  setSessionSwapElementFilter(
+                                    _ms > 0
+                                      ? slot.fire === _ms
+                                        ? "fire"
+                                        : slot.earth === _ms
+                                          ? "earth"
+                                          : slot.air === _ms
+                                            ? "air"
+                                            : "water"
+                                      : null,
+                                  );
                                 },
-                                slotIdx === 0
-                                  ? `${t("ingredientShort")} 1 ×2`
-                                  : `${t("ingredientShort")} ${slotIdx + 1}`,
-                              ),
-                                    /*#__PURE__*/ React.createElement(
+                                className: `w-full relative rounded-xl border-2 p-2.5 flex flex-col gap-1.5 text-left transition-all hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1 group ${slotBg}`,
+                              },
+                                  /*#__PURE__*/ React.createElement(
                                 "div",
                                 {
-                                  className: "flex items-center gap-1",
+                                  className:
+                                    "flex items-center justify-between",
                                 },
-                                reqType &&
-                                        /*#__PURE__*/ React.createElement(
+                                    /*#__PURE__*/ React.createElement(
                                   "span",
                                   {
                                     className:
-                                      "text-[9px] font-bold text-indigo-500 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-900/40 px-1.5 py-0.5 rounded",
+                                      "text-[10px] font-bold text-slate-400 uppercase",
                                   },
-                                  reqType,
+                                  slotIdx === 0
+                                    ? `${t("ingredientShort")} 1 ×2`
+                                    : `${t("ingredientShort")} ${slotIdx + 1}`,
                                 ),
-                                      /*#__PURE__*/ React.createElement("i", {
-                                  className:
-                                    "fa-solid fa-shuffle text-[9px] text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity",
-                                }),
-                              ),
-                            ),
-                            slot
-                              ? /*#__PURE__*/ React.createElement(
-                                React.Fragment,
-                                null,
-                                        /*#__PURE__*/ React.createElement(
+                                    /*#__PURE__*/ React.createElement(
                                   "div",
                                   {
-                                    className:
-                                      "flex flex-col items-center gap-1 py-1",
+                                    className: "flex items-center gap-1",
                                   },
-                                          /*#__PURE__*/ React.createElement(
-                                    ItemIcon,
-                                    {
-                                      id: slot.id,
-                                      name: slot.name,
-                                      size: "w-8 h-8 flex-shrink-0",
-                                    },
-                                  ),
-                                          /*#__PURE__*/ React.createElement(
-                                    "p",
+                                  reqType &&
+                                        /*#__PURE__*/ React.createElement(
+                                    "span",
                                     {
                                       className:
-                                        "text-xs font-bold text-slate-800 dark:text-slate-200 text-center truncate w-full",
+                                        "text-[9px] font-bold text-indigo-500 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-900/40 px-1.5 py-0.5 rounded",
                                     },
-                                    slot.name,
+                                    reqType,
                                   ),
-                                  Object.keys(parsedLager).length > 0 &&
-                                            /*#__PURE__*/ React.createElement(
-                                    "p",
-                                    {
-                                      className: `text-[10px] font-semibold ${lagerAmt > 0 ? "text-green-600 dark:text-green-400" : "text-red-500"}`,
-                                    },
-                                    "Lager: ",
-                                    lagerAmt,
-                                  ),
+                                      /*#__PURE__*/ React.createElement("i", {
+                                    className:
+                                      "fa-solid fa-shuffle text-[9px] text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity",
+                                  }),
                                 ),
+                              ),
+                              slot
+                                ? /*#__PURE__*/ React.createElement(
+                                  React.Fragment,
+                                  null,
                                         /*#__PURE__*/ React.createElement(
+                                    "div",
+                                    {
+                                      className:
+                                        "flex flex-col items-center gap-1 py-1",
+                                    },
+                                          /*#__PURE__*/ React.createElement(
+                                      ItemIcon,
+                                      {
+                                        id: slot.id,
+                                        name: slot.name,
+                                        size: "w-8 h-8 flex-shrink-0",
+                                      },
+                                    ),
+                                          /*#__PURE__*/ React.createElement(
+                                      "p",
+                                      {
+                                        className:
+                                          "text-xs font-bold text-slate-800 dark:text-slate-200 text-center truncate w-full",
+                                      },
+                                      slot.name,
+                                    ),
+                                    Object.keys(parsedLager).length > 0 &&
+                                            /*#__PURE__*/ React.createElement(
+                                      "p",
+                                      {
+                                        className: `text-[10px] font-semibold ${lagerAmt > 0 ? "text-green-600 dark:text-green-400" : "text-red-500"}`,
+                                      },
+                                      "Lager: ",
+                                      lagerAmt,
+                                    ),
+                                  ),
+                                        /*#__PURE__*/ React.createElement(
+                                    "div",
+                                    {
+                                      className:
+                                        "flex gap-0.5 flex-wrap justify-center",
+                                    },
+                                    [
+                                      [
+                                        "fa-fire",
+                                        "text-red-500",
+                                        slot.fire,
+                                      ],
+                                      [
+                                        "fa-droplet",
+                                        "text-blue-500",
+                                        slot.water,
+                                      ],
+                                      [
+                                        "fa-wind",
+                                        "text-yellow-500",
+                                        slot.air,
+                                      ],
+                                      [
+                                        "fa-mountain",
+                                        "text-green-600",
+                                        slot.earth,
+                                      ],
+                                    ].map(([icon, color, val]) =>
+                                            /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      {
+                                        key: icon,
+                                        className: `flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold ${color}`,
+                                      },
+                                              /*#__PURE__*/ React.createElement(
+                                        "i",
+                                        {
+                                          className: `fa-solid ${icon} text-[9px]`,
+                                        },
+                                      ),
+                                      val,
+                                    ),
+                                    ),
+                                          /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      {
+                                        className: `flex items-center gap-0.5 py-0.5 px-1 rounded border text-[10px] font-bold ${slot.quality > 0 ? "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-indigo-500 dark:text-indigo-400" : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600"}`,
+                                      },
+                                            /*#__PURE__*/ React.createElement(
+                                        "i",
+                                        {
+                                          className:
+                                            "fa-solid fa-wand-magic-sparkles text-[9px]",
+                                        },
+                                      ),
+                                      slot.quality,
+                                    ),
+                                  ),
+                                )
+                                : /*#__PURE__*/ React.createElement(
                                   "div",
                                   {
                                     className:
-                                      "flex gap-0.5 flex-wrap justify-center",
+                                      "flex flex-col items-center gap-1 py-2 text-slate-400",
                                   },
-                                  [
-                                    [
-                                      "fa-fire",
-                                      "text-red-500",
-                                      slot.fire,
-                                    ],
-                                    [
-                                      "fa-droplet",
-                                      "text-blue-500",
-                                      slot.water,
-                                    ],
-                                    [
-                                      "fa-wind",
-                                      "text-yellow-500",
-                                      slot.air,
-                                    ],
-                                    [
-                                      "fa-mountain",
-                                      "text-green-600",
-                                      slot.earth,
-                                    ],
-                                  ].map(([icon, color, val]) =>
-                                            /*#__PURE__*/ React.createElement(
-                                    "div",
-                                    {
-                                      key: icon,
-                                      className: `flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold ${color}`,
-                                    },
-                                              /*#__PURE__*/ React.createElement(
-                                      "i",
-                                      {
-                                        className: `fa-solid ${icon} text-[9px]`,
-                                      },
-                                    ),
-                                    val,
-                                  ),
-                                  ),
-                                          /*#__PURE__*/ React.createElement(
-                                    "div",
-                                    {
-                                      className: `flex items-center gap-0.5 py-0.5 px-1 rounded border text-[10px] font-bold ${slot.quality > 0 ? "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-indigo-500 dark:text-indigo-400" : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600"}`,
-                                    },
-                                            /*#__PURE__*/ React.createElement(
-                                      "i",
-                                      {
-                                        className:
-                                          "fa-solid fa-wand-magic-sparkles text-[9px]",
-                                      },
-                                    ),
-                                    slot.quality,
-                                  ),
-                                ),
-                              )
-                              : /*#__PURE__*/ React.createElement(
-                                "div",
-                                {
-                                  className:
-                                    "flex flex-col items-center gap-1 py-2 text-slate-400",
-                                },
                                         /*#__PURE__*/ React.createElement("i", {
-                                  className:
-                                    "fa-solid fa-plus text-base",
-                                }),
+                                    className:
+                                      "fa-solid fa-plus text-base",
+                                  }),
                                         /*#__PURE__*/ React.createElement(
-                                  "span",
-                                  {
-                                    className: "text-[10px]",
-                                  },
-                                  t("ingredientModal"),
+                                    "span",
+                                    {
+                                      className: "text-[10px]",
+                                    },
+                                    t("ingredientModal"),
+                                  ),
                                 ),
-                              ),
+                            ),
+                            showCraftPlus &&
+                              /*#__PURE__*/ React.createElement(
+                              "button",
+                              {
+                                type: "button",
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  if (craftableRecipes.length === 1) {
+                                    setSessionRecipes((prev) => [
+                                      ...prev,
+                                      {
+                                        recipeId: craftableRecipes[0].id,
+                                        savedMaterials: null,
+                                      },
+                                    ]);
+                                  } else {
+                                    setSessionCraftPicker({
+                                      slotIdx,
+                                      recipes: craftableRecipes,
+                                    });
+                                  }
+                                },
+                                className:
+                                  "absolute bottom-1 right-1 z-10 w-5 h-5 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md",
+                                title: "Als Extra-Craft hinzufügen",
+                              },
+                                /*#__PURE__*/ React.createElement("i", {
+                                className: "fa-solid fa-plus text-[9px]",
+                              }),
+                            ),
                           );
                         }),
                       ),
@@ -5535,6 +5622,73 @@ function App() {
                       }),
                     );
                   })(),
+                ),
+              ),
+              sessionCraftPicker &&
+                /*#__PURE__*/ React.createElement(
+                "div",
+                {
+                  className:
+                    "fixed inset-0 z-[70] flex items-center justify-center bg-black/40",
+                  onClick: () => setSessionCraftPicker(null),
+                },
+                  /*#__PURE__*/ React.createElement(
+                  "div",
+                  {
+                    className:
+                      "bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-5 min-w-[280px] max-w-sm",
+                    onClick: (e) => e.stopPropagation(),
+                  },
+                    /*#__PURE__*/ React.createElement(
+                    "p",
+                    {
+                      className:
+                        "text-sm font-bold text-slate-700 dark:text-slate-200 mb-3",
+                    },
+                    "Rezept wählen für \u201E",
+                    sessionCraftPicker.recipes[0]?.product,
+                    "\u201C:",
+                  ),
+                  sessionCraftPicker.recipes.map((r) =>
+                      /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      key: r.id,
+                      onClick: () => {
+                        setSessionRecipes((prev) => [
+                          ...prev,
+                          { recipeId: r.id, savedMaterials: null },
+                        ]);
+                        setSessionCraftPicker(null);
+                      },
+                      className:
+                        "w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-400 text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 last:mb-0",
+                    },
+                        /*#__PURE__*/ React.createElement(ItemIcon, {
+                      id: r.matchedRecipeId ?? r.id,
+                      name: r.product,
+                      size: "w-5 h-5",
+                    }),
+                    r.product,
+                        /*#__PURE__*/ React.createElement(
+                      "span",
+                      {
+                        className:
+                          "ml-auto text-xs text-slate-400 font-normal",
+                      },
+                      r.rank,
+                    ),
+                  ),
+                  ),
+                    /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      onClick: () => setSessionCraftPicker(null),
+                      className:
+                        "mt-2 w-full text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-center py-1",
+                    },
+                    "Abbrechen",
+                  ),
                 ),
               ),
               sessionStep === 3 &&
