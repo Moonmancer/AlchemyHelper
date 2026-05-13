@@ -1333,6 +1333,11 @@ function App() {
       let matIds;
       if (recipe.rank === "Custom" && recipe.savedMaterials) {
         matIds = recipe.savedMaterials;
+        if (recipe.savedAgentId != null && !(sessionAgents[idx] ?? null)) {
+          const savedAgent =
+            AGENTS.find((a) => a.id === recipe.savedAgentId) || null;
+          if (savedAgent) agentUpdates.push({ idx, agent: savedAgent });
+        }
       } else {
         const existingAgent = sessionAgents[idx] ?? null;
         let combo;

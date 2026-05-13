@@ -1303,7 +1303,7 @@ window.DELIVERY_LOCATIONS = [
             {
                 key: "researcher",
                 name: "Researcher",
-                delivery_text: "",
+                delivery_text: "located at the Magical Tool shop in Prontera",
                 navi: "prt_intr01 81 87",
                 mapX: 312,
                 mapY: 196,
@@ -1410,7 +1410,7 @@ window.DELIVERY_LOCATIONS = [
             {
                 key: "explorer",
                 name: "Explorer",
-                delivery_text: "",
+                delivery_text: "staying in a house behind the Morroc Tool Dealer shop",
                 navi: "moc_intr01 20 66",
                 mapX: 138,
                 mapY: 409,
