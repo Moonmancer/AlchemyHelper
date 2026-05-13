@@ -6,3 +6,5 @@ tailwind.input.css
 build-css.js
 build-jsx.js
 .vscode/
+.temp/
+temp/

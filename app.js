@@ -639,6 +639,33 @@ function App() {
       return next;
     });
   };
+  const [simplifiedCraftView, setSimplifiedCraftView] = useState(() => {
+    try {
+      return localStorage.getItem("alchemySimplifiedCraftView") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSimplifiedCraftView = () => {
+    setSimplifiedCraftView((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(
+          "alchemySimplifiedCraftView",
+          next ? "1" : "0",
+        );
+      } catch { }
+      return next;
+    });
+  };
+  const [sessionStep4RecipeIdx, setSessionStep4RecipeIdx] = useState(() => {
+    const v = parseInt(localStorage.getItem("alchemyStep4RecipeIdx"), 10);
+    return isNaN(v) ? 0 : v;
+  });
+  const setSessionStep4RecipeIdxPersist = (v) => {
+    setSessionStep4RecipeIdx(v);
+    localStorage.setItem("alchemyStep4RecipeIdx", String(v));
+  };
   const [ignoreEmptyItems, setIgnoreEmptyItems] = useState(() => {
     try {
       return localStorage.getItem("alchemyIgnoreEmptyItems") === "1";
@@ -654,6 +681,46 @@ function App() {
       } catch { }
       return next;
     });
+  };
+  const [rememberIngredients, setRememberIngredients] = useState(() => {
+    try {
+      return localStorage.getItem("alchemyRememberIngredients") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleRememberIngredients = () => {
+    setRememberIngredients((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("alchemyRememberIngredients", next ? "1" : "0");
+      } catch { }
+      return next;
+    });
+  };
+  const saveRecipeIngredientsPersist = (recipeId, materialIds, agentId) => {
+    try {
+      localStorage.setItem(
+        `alchemyRecipeIngredients_${recipeId}`,
+        JSON.stringify({ materialIds, agentId: agentId ?? null }),
+      );
+    } catch { }
+  };
+  const loadRecipeIngredientsPersist = (recipeId) => {
+    try {
+      const s = localStorage.getItem(`alchemyRecipeIngredients_${recipeId}`);
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  };
+  const clearAllRecipeIngredientsPersist = () => {
+    try {
+      const keys = Object.keys(localStorage).filter((k) =>
+        k.startsWith("alchemyRecipeIngredients_"),
+      );
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch { }
   };
   const [matSplitMode, setMatSplitMode] = useState(() => {
     try {
@@ -733,9 +800,14 @@ function App() {
   React.useEffect(() => {
     setSessionMaxStep((prev) => Math.max(prev, sessionStep));
   }, [sessionStep]);
-  const [sessionRecipes, setSessionRecipes] = useState(
-    () => _savedSession?.recipes ?? [],
-  ); // [{recipeId, savedMaterials:[id|null,...]}]
+  const [sessionRecipes, setSessionRecipes] = useState(() => {
+    const raw = _savedSession?.recipes ?? [];
+    return raw.map((r) => ({
+      _id: Math.random().toString(36).slice(2, 10),
+      parentId: null,
+      ...r,
+    }));
+  }); // [{recipeId, savedMaterials:[id|null,...], _id:string, parentId:string|null}]
   const [sessionActiveIdx, setSessionActiveIdx] = useState(
     () => _savedSession?.activeIdx ?? 0,
   ); // welches Rezept wird in Schritt 2 bearbeitet
@@ -1325,13 +1397,23 @@ function App() {
   const sessionToggleRecipe = (recipeId) => {
     setSessionRecipes((prev) => {
       const existing = prev.find((r) => r.recipeId === recipeId);
-      if (existing) return prev.filter((r) => r.recipeId !== recipeId);
+      if (existing) {
+        const toRemove = new Set();
+        const collect = (id) => {
+          toRemove.add(id);
+          prev.filter((r) => r.parentId === id).forEach((r) => collect(r._id));
+        };
+        collect(existing._id);
+        return prev.filter((r) => !toRemove.has(r._id));
+      }
       if (sessionSearch) setSessionSearch("");
       return [
         ...prev,
         {
           recipeId,
           savedMaterials: null,
+          _id: Math.random().toString(36).slice(2, 10),
+          parentId: null,
         },
       ];
     });
@@ -1357,6 +1439,18 @@ function App() {
           const savedAgent =
             AGENTS.find((a) => a.id === recipe.savedAgentId) || null;
           if (savedAgent) agentUpdates.push({ idx, agent: savedAgent });
+        }
+      } else if (rememberIngredients) {
+        const persisted = loadRecipeIngredientsPersist(entry.recipeId);
+        if (persisted) {
+          matIds = persisted.materialIds;
+          if (persisted.agentId != null && !(sessionAgents[idx] ?? null)) {
+            const savedAgent =
+              AGENTS.find((a) => a.id === persisted.agentId) || null;
+            if (savedAgent) agentUpdates.push({ idx, agent: savedAgent });
+          }
+        } else {
+          matIds = [null, null, null, null];
         }
       } else {
         const existingAgent = sessionAgents[idx] ?? null;
@@ -1434,6 +1528,17 @@ function App() {
   };
   const sessionSelectRecipeSlot = (idx) => {
     // Erst aktuellen Kessel speichern
+    if (rememberIngredients) {
+      const currentMaterials = sessionCauldron.map((m) => m?.id ?? null);
+      const currentRecipe = sessionRecipes[sessionActiveIdx];
+      if (currentRecipe) {
+        saveRecipeIngredientsPersist(
+          currentRecipe.recipeId,
+          currentMaterials,
+          sessionAgents[sessionActiveIdx]?.id ?? null,
+        );
+      }
+    }
     setSessionRecipes((prev) =>
       prev.map((e, i) =>
         i === sessionActiveIdx
@@ -1464,6 +1569,29 @@ function App() {
             id != null ? MATERIALS.find((m) => m.id === id) || null : null,
           ),
         );
+      } else if (rememberIngredients) {
+        const persisted = loadRecipeIngredientsPersist(entry?.recipeId);
+        if (persisted) {
+          setSessionCauldron(
+            persisted.materialIds.map((id) =>
+              id != null ? MATERIALS.find((m) => m.id === id) || null : null,
+            ),
+          );
+          if (persisted.agentId != null) {
+            const savedAgent =
+              AGENTS.find((a) => a.id === persisted.agentId) || null;
+            if (savedAgent) {
+              setSessionAgents((prev) => {
+                const next = [...prev];
+                while (next.length <= idx) next.push(null);
+                next[idx] = savedAgent;
+                return next;
+              });
+            }
+          }
+        } else {
+          setSessionCauldron([null, null, null, null]);
+        }
       } else {
         const existingAgent = sessionAgents[idx] ?? null;
         let combo;
@@ -1511,18 +1639,52 @@ function App() {
     }
   };
   const sessionGoToStep3 = () => {
-    // Aktuellen Kessel fï¿½r aktives Rezept sichern
-    setSessionRecipes((prev) =>
-      prev.map((e, i) =>
-        i === sessionActiveIdx
-          ? {
-            ...e,
-            savedMaterials: sessionCauldron.map((m) => m?.id ?? null),
-          }
-          : e,
-      ),
+    // Aktuellen Kessel für aktives Rezept sichern
+    const updatedRecipes = sessionRecipes.map((e, i) =>
+      i === sessionActiveIdx
+        ? { ...e, savedMaterials: sessionCauldron.map((m) => m?.id ?? null) }
+        : e,
     );
+    if (rememberIngredients) {
+      updatedRecipes.forEach((entry, i) => {
+        if (entry.savedMaterials?.some((id) => id != null)) {
+          saveRecipeIngredientsPersist(
+            entry.recipeId,
+            entry.savedMaterials,
+            sessionAgents[i]?.id ?? null,
+          );
+        }
+      });
+    }
+    setSessionRecipes(updatedRecipes);
     setSessionStep(3);
+  };
+
+  const sessionGoToStep4 = () => {
+    setSessionStep3ExpandedRecipes((prev) => {
+      if (prev.size > 0) return prev;
+      const knownIds = new Set(sessionRecipes.map((r) => r._id));
+      const childrenOf = {};
+      sessionRecipes.forEach((r, i) => {
+        if (r.parentId && knownIds.has(r.parentId)) {
+          if (!childrenOf[r.parentId]) childrenOf[r.parentId] = [];
+          childrenOf[r.parentId].push(i);
+        }
+      });
+      const craftOrder = [];
+      const visit = (idx) => {
+        (childrenOf[sessionRecipes[idx]._id] || []).forEach((ci) => visit(ci));
+        craftOrder.push(idx);
+      };
+      sessionRecipes.forEach((r, i) => {
+        if (!r.parentId || !knownIds.has(r.parentId)) visit(i);
+      });
+      if (craftOrder.length > 0)
+        return new Set([sessionRecipes[craftOrder[0]].recipeId]);
+      return prev;
+    });
+    setSessionStep4RecipeIdxPersist(0);
+    setSessionStep(4);
   };
 
   // Berechnet den Tab-Index, der den gewählten NPC enthält (Fallback: 0)
@@ -1533,8 +1695,7 @@ function App() {
     );
     return idx >= 0 ? idx : 0;
   };
-  const sessionGoToStep4 = () => {
-    // Delivery-Array initialisieren: ein Eintrag pro Rezept (null = noch nicht gewï¿½hlt)
+  const sessionGoToStep5 = () => {
     setSessionDelivery((prev) => {
       const arr = [...prev];
       while (arr.length < sessionRecipes.length) arr.push(null);
@@ -1544,7 +1705,7 @@ function App() {
     setSessionDeliveryTab(
       sessionRecipes.map((_, i) => tabForNpc(sessionDelivery[i] ?? null)),
     );
-    setSessionStep(4);
+    setSessionStep(5);
   };
   const sessionConfirm = () => {
     if (Object.keys(sessionAllMaterials).length === 0) return;
@@ -3743,6 +3904,43 @@ function App() {
                     }),
                   ),
                 ),
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  {
+                    className:
+                      "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4",
+                  },
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    null,
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-sm font-bold text-slate-700 dark:text-slate-200",
+                      },
+                      t("simplifiedCraftLabel"),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
+                      },
+                      t("simplifiedCraftHint"),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      onClick: toggleSimplifiedCraftView,
+                      className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${simplifiedCraftView ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                    },
+                    /*#__PURE__*/ React.createElement("span", {
+                      className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${simplifiedCraftView ? "translate-x-5" : "translate-x-0"}`,
+                    }),
+                  ),
+                ),
                   /*#__PURE__*/ React.createElement(
                   "div",
                   {
@@ -3778,6 +3976,61 @@ function App() {
                       /*#__PURE__*/ React.createElement("span", {
                       className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${ignoreEmptyItems ? "translate-x-5" : "translate-x-0"}`,
                     }),
+                  ),
+                ),
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  {
+                    className:
+                      "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-3",
+                  },
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    { className: "flex items-center justify-between gap-4" },
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      null,
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-sm font-bold text-slate-700 dark:text-slate-200",
+                        },
+                        t("rememberIngredientsLabel"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
+                        },
+                        t("rememberIngredientsHint"),
+                      ),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "button",
+                      {
+                        onClick: toggleRememberIngredients,
+                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${rememberIngredients ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                      },
+                      /*#__PURE__*/ React.createElement("span", {
+                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${rememberIngredients ? "translate-x-5" : "translate-x-0"}`,
+                      }),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      onClick: () => {
+                        if (window.confirm(t("rememberIngredientsResetConfirm"))) {
+                          clearAllRecipeIngredientsPersist();
+                        }
+                      },
+                      className:
+                        "mx-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors",
+                    },
+                    /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-triangle-exclamation" }),
+                    t("rememberIngredientsReset"),
                   ),
                 ),
                   /*#__PURE__*/ React.createElement(
@@ -4048,7 +4301,7 @@ function App() {
                   {
                     className: "flex items-center gap-3",
                   },
-                  [1, 2, 3, 4, 5].map((s, i) =>
+                  [1, 2, 3, 4, 5, 6].map((s, i) =>
                       /*#__PURE__*/ React.createElement(
                     React.Fragment,
                     {
@@ -4070,6 +4323,7 @@ function App() {
                           t("step3Label"),
                           t("step4Label"),
                           t("step5Label"),
+                          t("step6Label"),
                         ][i],
                         className: `w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all
                                                                     ${sessionStep === s ? "bg-indigo-500 text-white ring-2 ring-indigo-300 dark:ring-indigo-700" : s < sessionMaxStep ? "bg-green-500 text-white hover:bg-indigo-500 cursor-pointer" : s === sessionMaxStep ? "bg-green-500 text-white hover:bg-indigo-500 cursor-pointer" : "bg-slate-200 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"}`,
@@ -4092,7 +4346,9 @@ function App() {
                           ? t("step3Label")
                           : sessionStep === 4
                             ? t("step4Label")
-                            : t("step5Label"),
+                            : sessionStep === 5
+                              ? t("step5Label")
+                              : t("step6Label"),
                   ),
                 ),
                   /*#__PURE__*/ React.createElement(
@@ -4415,150 +4671,112 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                     "div",
                     {
-                      className: "flex flex-wrap gap-2",
+                      className: "flex flex-wrap gap-2 items-start",
                     },
-                    sessionRecipes.map((entry, idx) => {
-                      const recipe = [...RECIPES, ...customRecipes].find(
-                        (r) => r.id === entry.recipeId,
-                      );
-                      const slots =
-                        idx === sessionActiveIdx
-                          ? sessionCauldron
-                          : (entry.savedMaterials || []).map((id) =>
-                            id != null
-                              ? MATERIALS.find((m) => m.id === id) || null
-                              : null,
-                          );
-                      const tabAgent = sessionAgents[idx] ?? null;
-                      let fire = 0,
-                        earth = 0,
-                        air = 0,
-                        water = 0,
-                        qualitySum = 0,
-                        weightSum = 0,
-                        count = 0;
-                      slots.forEach((item, si) => {
-                        if (item) {
-                          const w = si === 0 ? 2 : 1;
-                          fire += item.fire * w;
-                          earth += item.earth * w;
-                          air += item.air * w;
-                          water += item.water * w;
-                          qualitySum += item.quality * w;
-                          weightSum += w;
-                          count++;
+                    (() => {
+                      const childrenOf = {};
+                      sessionRecipes.forEach((r, i) => {
+                        if (r.parentId) {
+                          if (!childrenOf[r.parentId]) childrenOf[r.parentId] = [];
+                          childrenOf[r.parentId].push(i);
                         }
                       });
-                      const totals = {
-                        fire: fire + (tabAgent?.fire ?? 0),
-                        earth: earth + (tabAgent?.earth ?? 0),
-                        air: air + (tabAgent?.air ?? 0),
-                        water: water + (tabAgent?.water ?? 0),
-                      };
-                      const quality =
-                        (weightSum > 0
-                          ? Math.floor(qualitySum / weightSum)
-                          : 0) + (tabAgent?.quality ?? 0);
-                      const maxVal = Math.max(
-                        totals.fire,
-                        totals.earth,
-                        totals.air,
-                        totals.water,
-                      );
-                      let dom = "None";
-                      if (maxVal > 0) {
-                        const doms = [
-                          ["Fire", totals.fire],
-                          ["Earth", totals.earth],
-                          ["Air", totals.air],
-                          ["Water", totals.water],
-                        ].filter(([, v]) => v === maxVal);
-                        dom = doms.length === 1 ? doms[0][0] : "Tie";
-                      }
-                      const elKey = recipe?.element?.toLowerCase();
-                      const hasLager = Object.keys(parsedLager).length > 0;
-                      const slotsNeeded = {};
-                      slots.forEach((item) => {
-                        if (item)
-                          slotsNeeded[item.id] =
-                            (slotsNeeded[item.id] || 0) + 1;
-                      });
-                      const effectiveRankS2 =
-                        recipe?.rank === "Custom"
-                          ? recipe.customRank
-                          : recipe.rank;
-                      const potionIdS2 = {
-                        Basic: 645,
-                        Intermediate: 656,
-                        Advanced: 657,
-                      }[effectiveRankS2];
-                      if (potionIdS2)
-                        slotsNeeded[potionIdS2] =
-                          (slotsNeeded[potionIdS2] || 0) + 2;
-                      const lagerOk =
-                        !hasLager ||
-                        Object.entries(slotsNeeded).every(
-                          ([id, needed]) =>
-                            (parsedLager[parseInt(id)] || 0) >= needed,
+                      const knownIds = new Set(sessionRecipes.map((r) => r._id));
+                      const renderTabBtn = (idx, depth) => {
+                        const entry = sessionRecipes[idx];
+                        const recipe = [...RECIPES, ...customRecipes].find((r) => r.id === entry.recipeId);
+                        const slots =
+                          idx === sessionActiveIdx
+                            ? sessionCauldron
+                            : (entry.savedMaterials || []).map((id) =>
+                              id != null ? MATERIALS.find((m) => m.id === id) || null : null,
+                            );
+                        const tabAgent = sessionAgents[idx] ?? null;
+                        let fire = 0, earth = 0, air = 0, water = 0, qualitySum = 0, weightSum = 0, count = 0;
+                        slots.forEach((item, si) => {
+                          if (item) {
+                            const w = si === 0 ? 2 : 1;
+                            fire += item.fire * w;
+                            earth += item.earth * w;
+                            air += item.air * w;
+                            water += item.water * w;
+                            qualitySum += item.quality * w;
+                            weightSum += w;
+                            count++;
+                          }
+                        });
+                        const totals = {
+                          fire: fire + (tabAgent?.fire ?? 0),
+                          earth: earth + (tabAgent?.earth ?? 0),
+                          air: air + (tabAgent?.air ?? 0),
+                          water: water + (tabAgent?.water ?? 0),
+                        };
+                        const quality = (weightSum > 0 ? Math.floor(qualitySum / weightSum) : 0) + (tabAgent?.quality ?? 0);
+                        const maxVal = Math.max(totals.fire, totals.earth, totals.air, totals.water);
+                        let dom = "None";
+                        if (maxVal > 0) {
+                          const doms = [["Fire", totals.fire], ["Earth", totals.earth], ["Air", totals.air], ["Water", totals.water]].filter(([, v]) => v === maxVal);
+                          dom = doms.length === 1 ? doms[0][0] : "Tie";
+                        }
+                        const elKey = recipe?.element?.toLowerCase();
+                        const hasLager = Object.keys(parsedLager).length > 0;
+                        const slotsNeeded = {};
+                        slots.forEach((item) => {
+                          if (item) slotsNeeded[item.id] = (slotsNeeded[item.id] || 0) + 1;
+                        });
+                        const effectiveRankS2 = recipe?.rank === "Custom" ? recipe.customRank : recipe.rank;
+                        const potionIdS2 = { Basic: 645, Intermediate: 656, Advanced: 657 }[effectiveRankS2];
+                        if (potionIdS2) slotsNeeded[potionIdS2] = (slotsNeeded[potionIdS2] || 0) + 2;
+                        const lagerOk = !hasLager || Object.entries(slotsNeeded).every(([id, needed]) => (parsedLager[parseInt(id)] || 0) >= needed);
+                        const recipeValid = recipe && count === 4 && dom === recipe.element && quality >= recipe.minQuality && (!(recipe.minScore > 0) || totals[elKey] >= recipe.minScore) && lagerOk;
+                        const isActive = idx === sessionActiveIdx;
+                        const isRoot = !entry.parentId || !knownIds.has(entry.parentId);
+                        const sizeClass = depth === 0 ? "text-sm py-1.5 px-3" : "text-xs py-1 px-2.5";
+                        return /*#__PURE__*/ React.createElement(
+                          "button",
+                          {
+                            key: entry._id,
+                            onClick: () => sessionSelectRecipeSlot(idx),
+                            draggable: isRoot,
+                            onDragStart: isRoot ? (e) => { setSessionDragIdx(idx); e.dataTransfer.effectAllowed = "move"; } : undefined,
+                            onDragOver: isRoot ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setSessionDragOverIdx(idx); } : undefined,
+                            onDragLeave: isRoot ? () => setSessionDragOverIdx(null) : undefined,
+                            onDrop: isRoot ? (e) => { e.preventDefault(); if (sessionDragIdx !== null) sessionReorderRecipes(sessionDragIdx, idx); setSessionDragIdx(null); setSessionDragOverIdx(null); } : undefined,
+                            onDragEnd: isRoot ? () => { setSessionDragIdx(null); setSessionDragOverIdx(null); } : undefined,
+                            className: `flex items-center gap-2 ${sizeClass} rounded-xl border font-bold transition-all ${isRoot ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${sessionDragOverIdx === idx && sessionDragIdx !== idx ? "ring-2 ring-indigo-400 ring-offset-1 scale-105" : ""} ${isActive ? (recipeValid ? "bg-indigo-600 border-indigo-500 text-white" : "bg-red-600 border-red-500 text-white ring-2 ring-red-400 ring-offset-1") : recipeValid ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400" : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 hover:border-red-500"}`,
+                          },
+                          /*#__PURE__*/ React.createElement(ItemIcon, {
+                            id: recipe?.matchedRecipeId ?? recipe?.id,
+                            name: recipe?.product,
+                            size: "w-5 h-5",
+                          }),
+                          recipe?.product,
+                          !recipeValid && /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-circle-xmark text-xs" }),
+                          recipeValid && !isActive && /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-circle-check text-green-500 text-xs" }),
                         );
-                      const recipeValid =
-                        recipe &&
-                        count === 4 &&
-                        dom === recipe.element &&
-                        quality >= recipe.minQuality &&
-                        (!(recipe.minScore > 0) ||
-                          totals[elKey] >= recipe.minScore) &&
-                        lagerOk;
-                      const isActive = idx === sessionActiveIdx;
-                      return /*#__PURE__*/ React.createElement(
-                        "button",
-                        {
-                          key: entry.recipeId,
-                          onClick: () => sessionSelectRecipeSlot(idx),
-                          draggable: true,
-                          onDragStart: (e) => {
-                            setSessionDragIdx(idx);
-                            e.dataTransfer.effectAllowed = "move";
-                          },
-                          onDragOver: (e) => {
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = "move";
-                            setSessionDragOverIdx(idx);
-                          },
-                          onDragLeave: () => setSessionDragOverIdx(null),
-                          onDrop: (e) => {
-                            e.preventDefault();
-                            if (sessionDragIdx !== null) sessionReorderRecipes(sessionDragIdx, idx);
-                            setSessionDragIdx(null);
-                            setSessionDragOverIdx(null);
-                          },
-                          onDragEnd: () => {
-                            setSessionDragIdx(null);
-                            setSessionDragOverIdx(null);
-                          },
-                          className: `flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-bold transition-all cursor-grab active:cursor-grabbing ${sessionDragOverIdx === idx && sessionDragIdx !== idx
-                            ? "ring-2 ring-indigo-400 ring-offset-1 scale-105"
-                            : ""
-                            } ${isActive ? (recipeValid ? "bg-indigo-600 border-indigo-500 text-white" : "bg-red-600 border-red-500 text-white ring-2 ring-red-400 ring-offset-1") : recipeValid ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400" : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 hover:border-red-500"}`,
-                        },
-                            /*#__PURE__*/ React.createElement(ItemIcon, {
-                          id: recipe?.matchedRecipeId ?? recipe?.id,
-                          name: recipe?.product,
-                          size: "w-5 h-5",
-                        }),
-                        recipe?.product,
-                        !recipeValid &&
-                              /*#__PURE__*/ React.createElement("i", {
-                          className: "fa-solid fa-circle-xmark text-xs",
-                        }),
-                        recipeValid &&
-                        !isActive &&
-                              /*#__PURE__*/ React.createElement("i", {
-                          className:
-                            "fa-solid fa-circle-check text-green-500 text-xs",
-                        }),
-                      );
-                    }),
+                      };
+                      const renderGroup = (idx, depth) => {
+                        const entry = sessionRecipes[idx];
+                        const children = childrenOf[entry._id] || [];
+                        const btn = renderTabBtn(idx, depth);
+                        if (children.length === 0) return btn;
+                        return /*#__PURE__*/ React.createElement(
+                          "div",
+                          { key: entry._id + "_g", className: "flex flex-col gap-1" },
+                          btn,
+                          /*#__PURE__*/ React.createElement(
+                            "div",
+                            { className: "ml-3 pl-2 border-l-2 border-slate-300 dark:border-slate-600 flex flex-col gap-1" },
+                            children.map((ci) => renderGroup(ci, depth + 1)),
+                          ),
+                        );
+                      };
+                      const roots = sessionRecipes.reduce((acc, r, i) => {
+                        if (!r.parentId || !knownIds.has(r.parentId)) acc.push(i);
+                        return acc;
+                      }, []);
+                      return roots.map((ri) => renderGroup(ri, 0));
+                    })(),
                   ),
                 ),
                 (() => {
@@ -4839,12 +5057,15 @@ function App() {
                                       {
                                         recipeId: craftableRecipes[0].id,
                                         savedMaterials: null,
+                                        _id: Math.random().toString(36).slice(2, 10),
+                                        parentId: sessionRecipes[sessionActiveIdx]?._id ?? null,
                                       },
                                     ]);
                                   } else {
                                     setSessionCraftPicker({
                                       slotIdx,
                                       recipes: craftableRecipes,
+                                      parentId: sessionRecipes[sessionActiveIdx]?._id ?? null,
                                     });
                                   }
                                 },
@@ -5657,7 +5878,12 @@ function App() {
                       onClick: () => {
                         setSessionRecipes((prev) => [
                           ...prev,
-                          { recipeId: r.id, savedMaterials: null },
+                          {
+                            recipeId: r.id,
+                            savedMaterials: null,
+                            _id: Math.random().toString(36).slice(2, 10),
+                            parentId: sessionCraftPicker.parentId ?? null,
+                          },
                         ]);
                         setSessionCraftPicker(null);
                       },
@@ -5720,233 +5946,6 @@ function App() {
                     {
                       className: "mb-4",
                     },
-                        /*#__PURE__*/ React.createElement(
-                      "p",
-                      {
-                        className:
-                          "text-xs font-bold uppercase tracking-wider text-slate-400 mb-2",
-                      },
-                      t("sessionRecipesLabel"),
-                    ),
-                        /*#__PURE__*/ React.createElement(
-                      "div",
-                      {
-                        className: "space-y-1.5 mb-4",
-                      },
-                      sessionRecipes.map((entry, recipeIdx) => {
-                        const recipe = [...RECIPES, ...customRecipes].find(
-                          (r) => r.id === entry.recipeId,
-                        );
-                        if (!recipe) return null;
-                        const isExpanded = sessionStep3ExpandedRecipes.has(
-                          entry.recipeId,
-                        );
-                        const perMats =
-                          sessionPerRecipeMaterials[recipeIdx] || {};
-                        const hasLager =
-                          Object.keys(parsedLager).length > 0;
-                        const recipeOk =
-                          !hasLager ||
-                          Object.entries(perMats).every(
-                            ([idStr, needed]) =>
-                              (parsedLager[parseInt(idStr)] || 0) >= needed,
-                          );
-                        return /*#__PURE__*/ React.createElement(
-                          "div",
-                          {
-                            key: entry.recipeId,
-                            className: `rounded-xl border transition-all ${isExpanded ? "border-indigo-400 dark:border-indigo-500" : "border-slate-200 dark:border-slate-700"}`,
-                          },
-                              /*#__PURE__*/ React.createElement(
-                            "button",
-                            {
-                              onClick: () =>
-                                setSessionStep3ExpandedRecipes((prev) => {
-                                  const s = new Set(prev);
-                                  isExpanded
-                                    ? s.delete(entry.recipeId)
-                                    : s.add(entry.recipeId);
-                                  return s;
-                                }),
-                              className: `w-full flex items-center gap-2 px-3 py-2 rounded-t-xl transition-all ${isExpanded ? "bg-indigo-50 dark:bg-indigo-900/30" : "bg-slate-50 dark:bg-slate-900/30 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"}`,
-                            },
-                                /*#__PURE__*/ React.createElement(ItemIcon, {
-                              id: recipe?.matchedRecipeId ?? recipe?.id,
-                              name: recipe?.product,
-                              size: "w-5 h-5 flex-shrink-0",
-                            }),
-                                /*#__PURE__*/ React.createElement(
-                              "span",
-                              {
-                                className: `flex-1 text-sm font-bold text-left ${isExpanded ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-200"}`,
-                              },
-                              recipe?.product,
-                            ),
-                            hasLager &&
-                                  /*#__PURE__*/ React.createElement("i", {
-                              className: `fa-solid ${recipeOk ? "fa-circle-check text-green-500" : "fa-circle-xmark text-red-400"} text-xs flex-shrink-0`,
-                            }),
-                                /*#__PURE__*/ React.createElement("i", {
-                              className: `fa-solid fa-chevron-${isExpanded ? "up" : "down"} text-xs text-slate-400 flex-shrink-0`,
-                            }),
-                          ),
-                          isExpanded &&
-                          Object.keys(perMats).length > 0 &&
-                                /*#__PURE__*/ React.createElement(
-                            "div",
-                            {
-                              className:
-                                "border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 rounded-b-xl space-y-1",
-                            },
-                            (() => {
-                              const effectiveRank =
-                                recipe.rank === "Custom"
-                                  ? recipe.customRank
-                                  : recipe.rank;
-                              const potionId = {
-                                Basic: 645,
-                                Intermediate: 656,
-                                Advanced: 657,
-                              }[effectiveRank];
-                              const potionBase = potionId
-                                ? POTION_BASE.find(
-                                  (p) => p.id === potionId,
-                                )
-                                : null;
-                              const catObj = CATALYSTS.find(
-                                (c) => c.name === recipe.catalyst,
-                              );
-                              const orderedSlots = [];
-                              if (potionBase)
-                                orderedSlots.push({
-                                  type: t("potionBaseShort"),
-                                  id: potionBase.id,
-                                  name: potionBase.name,
-                                  needed: 2,
-                                });
-                              (entry.savedMaterials || []).forEach(
-                                (matId, slotIdx) => {
-                                  const mat =
-                                    matId != null
-                                      ? MATERIALS.find(
-                                        (m) => m.id === matId,
-                                      )
-                                      : null;
-                                  orderedSlots.push({
-                                    type: `${t("ingredientShort")} ${slotIdx + 1}`,
-                                    id: matId,
-                                    name:
-                                      mat?.name ||
-                                      (matId != null
-                                        ? `ID ${matId}`
-                                        : "—"),
-                                    needed:
-                                      matId != null
-                                        ? perMats[matId] || 1
-                                        : 0,
-                                  });
-                                },
-                              );
-                              if (catObj && catObj.id !== "none")
-                                orderedSlots.push({
-                                  type: t("catalystShort"),
-                                  id: catObj.id,
-                                  name: catObj.name,
-                                  needed: perMats[catObj.id] || 1,
-                                });
-                              const recipeAgent =
-                                sessionAgents[recipeIdx] ?? null;
-                              if (recipeAgent)
-                                orderedSlots.push({
-                                  type: t("agentLabel"),
-                                  id: recipeAgent.id,
-                                  name: recipeAgent.name,
-                                  needed: perMats[recipeAgent.id] || 1,
-                                });
-                              return orderedSlots.map((slot, i) => {
-                                const inLager =
-                                  slot.id != null
-                                    ? parsedLager[slot.id] || 0
-                                    : 0;
-                                const noLag = !hasLager;
-                                const ok =
-                                  noLag ||
-                                  slot.id == null ||
-                                  inLager >= slot.needed;
-                                const isEmpty = slot.id == null;
-                                const matType =
-                                  slot.id != null
-                                    ? MATERIALS.find(
-                                      (m) => m.id === slot.id,
-                                    )?.type
-                                    : null;
-                                return /*#__PURE__*/ React.createElement(
-                                  "div",
-                                  {
-                                    key: i,
-                                    className: `flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs ${isEmpty ? "bg-slate-50 dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 text-slate-400" : noLag ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400" : ok ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"}`,
-                                  },
-                                        /*#__PURE__*/ React.createElement(
-                                    "span",
-                                    {
-                                      className:
-                                        "text-[9px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 w-16 flex-shrink-0",
-                                    },
-                                    slot.type,
-                                  ),
-                                  matType &&
-                                          /*#__PURE__*/ React.createElement(
-                                    "span",
-                                    {
-                                      className:
-                                        "text-[9px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded flex-shrink-0 w-10 text-center",
-                                    },
-                                    matType,
-                                  ),
-                                  !isEmpty &&
-                                          /*#__PURE__*/ React.createElement(
-                                    ItemIcon,
-                                    {
-                                      id: slot.id,
-                                      name: slot.name,
-                                      size: "w-4 h-4 flex-shrink-0",
-                                    },
-                                  ),
-                                        /*#__PURE__*/ React.createElement(
-                                    "span",
-                                    {
-                                      className:
-                                        "flex-1 font-semibold truncate",
-                                    },
-                                    slot.name,
-                                  ),
-                                  !isEmpty &&
-                                          /*#__PURE__*/ React.createElement(
-                                    "span",
-                                    {
-                                      className:
-                                        "font-black flex-shrink-0",
-                                    },
-                                    !noLag && inLager > 0
-                                      ? `${inLager} / `
-                                      : "",
-                                    slot.needed,
-                                  ),
-                                  !isEmpty &&
-                                  !noLag &&
-                                          /*#__PURE__*/ React.createElement(
-                                    "i",
-                                    {
-                                      className: `fa-solid ${ok ? "fa-circle-check" : "fa-circle-xmark"} text-xs flex-shrink-0`,
-                                    },
-                                  ),
-                                );
-                              });
-                            })(),
-                          ),
-                        );
-                      }),
-                    ),
                         /*#__PURE__*/ React.createElement(
                       "div",
                       {
@@ -6272,6 +6271,651 @@ function App() {
                   /*#__PURE__*/ React.createElement(
                 React.Fragment,
                 null,
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  { className: "px-6 pt-4 pb-2 flex-shrink-0" },
+                  /*#__PURE__*/ React.createElement(
+                    "p",
+                    { className: "text-sm text-slate-500 dark:text-slate-400" },
+                    t("step4Desc"),
+                  ),
+                ),
+                simplifiedCraftView
+                  ? (() => {
+                    const knownIds2 = new Set(
+                      sessionRecipes.map((r) => r._id),
+                    );
+                    const childrenOf2 = {};
+                    sessionRecipes.forEach((r, i) => {
+                      if (r.parentId && knownIds2.has(r.parentId)) {
+                        if (!childrenOf2[r.parentId])
+                          childrenOf2[r.parentId] = [];
+                        childrenOf2[r.parentId].push(i);
+                      }
+                    });
+                    const craftOrder2 = [];
+                    const visit2 = (idx) => {
+                      (
+                        childrenOf2[sessionRecipes[idx]._id] || []
+                      ).forEach((ci) => visit2(ci));
+                      craftOrder2.push(idx);
+                    };
+                    sessionRecipes.forEach((r, i) => {
+                      if (!r.parentId || !knownIds2.has(r.parentId))
+                        visit2(i);
+                    });
+                    const total = craftOrder2.length;
+                    const safeIdx = Math.max(
+                      0,
+                      Math.min(sessionStep4RecipeIdx, total - 1),
+                    );
+                    const recipeIdx = craftOrder2[safeIdx] ?? 0;
+                    const entry = sessionRecipes[recipeIdx];
+                    const recipe = [
+                      ...RECIPES,
+                      ...customRecipes,
+                    ].find((r) => r.id === entry?.recipeId);
+                    const perMats =
+                      sessionPerRecipeMaterials[recipeIdx] || {};
+                    const hasLager =
+                      Object.keys(parsedLager).length > 0;
+                    const recipeOk =
+                      !hasLager ||
+                      Object.entries(perMats).every(
+                        ([idStr, needed]) =>
+                          (parsedLager[parseInt(idStr)] || 0) >= needed,
+                      );
+                    const renderSlots = (ent, rec, ri) => {
+                      const pm = sessionPerRecipeMaterials[ri] || {};
+                      const effectiveRank =
+                        rec.rank === "Custom"
+                          ? rec.customRank
+                          : rec.rank;
+                      const potionId = {
+                        Basic: 645,
+                        Intermediate: 656,
+                        Advanced: 657,
+                      }[effectiveRank];
+                      const potionBase = potionId
+                        ? POTION_BASE.find((p) => p.id === potionId)
+                        : null;
+                      const catObj = CATALYSTS.find(
+                        (c) => c.name === rec.catalyst,
+                      );
+                      const slots = [];
+                      if (potionBase)
+                        slots.push({
+                          type: t("potionBaseShort"),
+                          id: potionBase.id,
+                          name: potionBase.name,
+                          needed: 2,
+                        });
+                      (ent.savedMaterials || []).forEach(
+                        (matId, slotIdx) => {
+                          const mat =
+                            matId != null
+                              ? MATERIALS.find((m) => m.id === matId)
+                              : null;
+                          slots.push({
+                            type: `${t("ingredientShort")} ${slotIdx + 1}`,
+                            id: matId,
+                            name:
+                              mat?.name ||
+                              (matId != null ? `ID ${matId}` : "—"),
+                            needed:
+                              matId != null ? pm[matId] || 1 : 0,
+                          });
+                        },
+                      );
+                      if (catObj && catObj.id !== "none")
+                        slots.push({
+                          type: t("catalystShort"),
+                          id: catObj.id,
+                          name: catObj.name,
+                          needed: pm[catObj.id] || 1,
+                        });
+                      const ra = sessionAgents[ri] ?? null;
+                      if (ra)
+                        slots.push({
+                          type: t("agentLabel"),
+                          id: ra.id,
+                          name: ra.name,
+                          needed: pm[ra.id] || 1,
+                        });
+                      return slots.map((slot, i) => {
+                        const inLager =
+                          slot.id != null
+                            ? parsedLager[slot.id] || 0
+                            : 0;
+                        const noLag = !hasLager;
+                        const ok =
+                          noLag ||
+                          slot.id == null ||
+                          inLager >= slot.needed;
+                        const isEmpty = slot.id == null;
+                        const matType =
+                          slot.id != null
+                            ? MATERIALS.find((m) => m.id === slot.id)
+                              ?.type
+                            : null;
+                        return /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            key: i,
+                            className: `flex items-center gap-1.5 px-2 py-1.5 rounded-lg border ${isEmpty ? "bg-slate-50 dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 text-slate-400" : noLag ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400" : ok ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"}`,
+                          },
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-[9px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 w-16 flex-shrink-0",
+                            },
+                            slot.type,
+                          ),
+                          matType &&
+                            /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-[9px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded flex-shrink-0 w-10 text-center",
+                            },
+                            matType,
+                          ),
+                          !isEmpty &&
+                            /*#__PURE__*/ React.createElement(ItemIcon, {
+                            id: slot.id,
+                            name: slot.name,
+                            size: "w-5 h-5 flex-shrink-0",
+                          }),
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "flex-1 text-sm font-semibold truncate",
+                            },
+                            slot.name,
+                          ),
+                          !isEmpty &&
+                            /*#__PURE__*/ React.createElement(
+                            "span",
+                            { className: "text-sm font-black flex-shrink-0" },
+                            !noLag && inLager > 0
+                              ? `${inLager} / `
+                              : "",
+                            slot.needed,
+                          ),
+                          !isEmpty &&
+                          !noLag &&
+                            /*#__PURE__*/ React.createElement("i", {
+                            className: `fa-solid ${ok ? "fa-circle-check" : "fa-circle-xmark"} text-sm flex-shrink-0`,
+                          }),
+                        );
+                      });
+                    };
+                    return /*#__PURE__*/ React.createElement(
+                      React.Fragment,
+                      null,
+                      /*#__PURE__*/ React.createElement(
+                        "div",
+                        {
+                          className:
+                            "px-6 pb-2 flex-shrink-0 flex items-center justify-between",
+                        },
+                        /*#__PURE__*/ React.createElement(
+                          "p",
+                          {
+                            className:
+                              "text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500",
+                          },
+                          t("simplifiedCraftCount")
+                            .replace("{current}", safeIdx + 1)
+                            .replace("{total}", total),
+                        ),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "div",
+                        {
+                          className:
+                            "flex-1 overflow-y-auto custom-scrollbar px-6 pb-4 min-h-0",
+                        },
+                        recipe &&
+                          /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className:
+                              "rounded-xl border border-indigo-400 dark:border-indigo-500 overflow-hidden",
+                          },
+                            /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              className:
+                                "flex items-center gap-3 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30",
+                            },
+                              /*#__PURE__*/ React.createElement(ItemIcon, {
+                              id:
+                                recipe?.matchedRecipeId ?? recipe?.id,
+                              name: recipe?.product,
+                              size: "w-7 h-7 flex-shrink-0",
+                            }),
+                              /*#__PURE__*/ React.createElement(
+                              "span",
+                              {
+                                className:
+                                  "flex-1 text-lg font-bold text-indigo-700 dark:text-indigo-300",
+                              },
+                              recipe?.product,
+                            ),
+                            hasLager &&
+                                /*#__PURE__*/ React.createElement(
+                              "i",
+                              {
+                                className: `fa-solid ${recipeOk ? "fa-circle-check text-green-500" : "fa-circle-xmark text-red-400"} text-base flex-shrink-0`,
+                              },
+                            ),
+                          ),
+                          Object.keys(perMats).length > 0 &&
+                              /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              className:
+                                "border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 space-y-1.5",
+                            },
+                            renderSlots(entry, recipe, recipeIdx),
+                          ),
+                        ),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "div",
+                        {
+                          className:
+                            "px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between flex-shrink-0",
+                        },
+                        /*#__PURE__*/ React.createElement(
+                          "button",
+                          {
+                            onClick: () =>
+                              safeIdx > 0
+                                ? setSessionStep4RecipeIdxPersist(safeIdx - 1)
+                                : setSessionStep(3),
+                            className:
+                              "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
+                          },
+                          /*#__PURE__*/ React.createElement("i", {
+                            className: "fa-solid fa-arrow-left",
+                          }),
+                          " ",
+                          t("back"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "button",
+                          {
+                            onClick: () =>
+                              safeIdx < total - 1
+                                ? setSessionStep4RecipeIdxPersist(safeIdx + 1)
+                                : sessionGoToStep5(),
+                            className:
+                              "relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-colors",
+                            style: { backgroundColor: "#4338ca" },
+                          },
+                          /*#__PURE__*/ React.createElement("div", {
+                            className: "absolute inset-0 transition-all duration-300",
+                            style: {
+                              backgroundColor: "#818cf8",
+                              width: `${Math.round(((safeIdx + 1) / total) * 100)}%`,
+                            },
+                          }),
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            { className: "relative flex items-center gap-2" },
+                            /*#__PURE__*/ React.createElement(
+                              "span",
+                              { className: "text-indigo-200 text-xs font-bold tabular-nums" },
+                              `${safeIdx + 1}/${total}`,
+                            ),
+                            safeIdx < total - 1 ? t("next") : t("step5Label"),
+                            " ",
+                            /*#__PURE__*/ React.createElement("i", {
+                              className: "fa-solid fa-arrow-right",
+                            }),
+                          ),
+                        ),
+                      ),
+                    );
+                  })()
+                  : /*#__PURE__*/ React.createElement(
+                    React.Fragment,
+                    null,
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      {
+                        className:
+                          "flex-1 overflow-y-auto custom-scrollbar px-6 pb-4 min-h-0",
+                      },
+                      /*#__PURE__*/ React.createElement(
+                        "div",
+                        { className: "space-y-1.5" },
+                        (() => {
+                          const knownIds = new Set(
+                            sessionRecipes.map((r) => r._id),
+                          );
+                          const childrenOf = {};
+                          sessionRecipes.forEach((r, i) => {
+                            if (r.parentId && knownIds.has(r.parentId)) {
+                              if (!childrenOf[r.parentId])
+                                childrenOf[r.parentId] = [];
+                              childrenOf[r.parentId].push(i);
+                            }
+                          });
+                          const craftOrder = [];
+                          const visit = (idx) => {
+                            (
+                              childrenOf[sessionRecipes[idx]._id] || []
+                            ).forEach((ci) => visit(ci));
+                            craftOrder.push(idx);
+                          };
+                          sessionRecipes.forEach((r, i) => {
+                            if (!r.parentId || !knownIds.has(r.parentId))
+                              visit(i);
+                          });
+                          const getDepth = (r) => {
+                            let d = 0,
+                              pid = r.parentId;
+                            while (pid && knownIds.has(pid)) {
+                              d++;
+                              pid = sessionRecipes.find(
+                                (pr) => pr._id === pid,
+                              )?.parentId;
+                            }
+                            return d;
+                          };
+                          const maxDepth = sessionRecipes.reduce(
+                            (m, r) => Math.max(m, getDepth(r)),
+                            0,
+                          );
+                          return craftOrder.map((recipeIdx) => {
+                            const entry = sessionRecipes[recipeIdx];
+                            const recipe = [
+                              ...RECIPES,
+                              ...customRecipes,
+                            ].find((r) => r.id === entry.recipeId);
+                            if (!recipe) return null;
+                            const isExpanded =
+                              sessionStep3ExpandedRecipes.has(
+                                entry.recipeId,
+                              );
+                            const perMats =
+                              sessionPerRecipeMaterials[recipeIdx] || {};
+                            const hasLager =
+                              Object.keys(parsedLager).length > 0;
+                            const recipeOk =
+                              !hasLager ||
+                              Object.entries(perMats).every(
+                                ([idStr, needed]) =>
+                                  (parsedLager[parseInt(idStr)] || 0) >=
+                                  needed,
+                              );
+                            const depth = getDepth(entry);
+                            const hasChildren =
+                              (childrenOf[entry._id] || []).length > 0;
+                            const indent = hasChildren
+                              ? (maxDepth - depth) * 16
+                              : 0;
+                            return /*#__PURE__*/ React.createElement(
+                              "div",
+                              {
+                                key: entry._id,
+                                style:
+                                  indent > 0
+                                    ? { marginLeft: `${indent}px` }
+                                    : undefined,
+                                className: `rounded-xl border transition-all ${hasChildren ? "border-l-4 border-l-indigo-200 dark:border-l-indigo-700 " : ""}${isExpanded ? "border-indigo-400 dark:border-indigo-500" : "border-slate-200 dark:border-slate-700"}`,
+                              },
+                              /*#__PURE__*/ React.createElement(
+                                "button",
+                                {
+                                  onClick: () =>
+                                    setSessionStep3ExpandedRecipes(
+                                      (prev) => {
+                                        const s = new Set(prev);
+                                        isExpanded
+                                          ? s.delete(entry.recipeId)
+                                          : s.add(entry.recipeId);
+                                        return s;
+                                      },
+                                    ),
+                                  className: `w-full flex items-center gap-2 px-3 py-2 rounded-t-xl transition-all ${isExpanded ? "bg-indigo-50 dark:bg-indigo-900/30" : "bg-slate-50 dark:bg-slate-900/30 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"}`,
+                                },
+                                hasChildren &&
+                                  /*#__PURE__*/ React.createElement(
+                                  "i",
+                                  {
+                                    className:
+                                      "fa-solid fa-turn-up fa-rotate-90 text-[9px] text-indigo-400 flex-shrink-0",
+                                  },
+                                ),
+                                /*#__PURE__*/ React.createElement(
+                                  ItemIcon,
+                                  {
+                                    id:
+                                      recipe?.matchedRecipeId ?? recipe?.id,
+                                    name: recipe?.product,
+                                    size: "w-5 h-5 flex-shrink-0",
+                                  },
+                                ),
+                                /*#__PURE__*/ React.createElement(
+                                  "span",
+                                  {
+                                    className: `flex-1 text-base font-bold text-left ${isExpanded ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-200"}`,
+                                  },
+                                  recipe?.product,
+                                ),
+                                hasLager &&
+                                  /*#__PURE__*/ React.createElement("i", {
+                                  className: `fa-solid ${recipeOk ? "fa-circle-check text-green-500" : "fa-circle-xmark text-red-400"} text-xs flex-shrink-0`,
+                                }),
+                                /*#__PURE__*/ React.createElement("i", {
+                                  className: `fa-solid fa-chevron-${isExpanded ? "up" : "down"} text-xs text-slate-400 flex-shrink-0`,
+                                }),
+                              ),
+                              isExpanded &&
+                              Object.keys(perMats).length > 0 &&
+                                /*#__PURE__*/ React.createElement(
+                                "div",
+                                {
+                                  className:
+                                    "border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 rounded-b-xl space-y-1",
+                                },
+                                (() => {
+                                  const effectiveRank =
+                                    recipe.rank === "Custom"
+                                      ? recipe.customRank
+                                      : recipe.rank;
+                                  const potionId = {
+                                    Basic: 645,
+                                    Intermediate: 656,
+                                    Advanced: 657,
+                                  }[effectiveRank];
+                                  const potionBase = potionId
+                                    ? POTION_BASE.find(
+                                      (p) => p.id === potionId,
+                                    )
+                                    : null;
+                                  const catObj = CATALYSTS.find(
+                                    (c) => c.name === recipe.catalyst,
+                                  );
+                                  const orderedSlots = [];
+                                  if (potionBase)
+                                    orderedSlots.push({
+                                      type: t("potionBaseShort"),
+                                      id: potionBase.id,
+                                      name: potionBase.name,
+                                      needed: 2,
+                                    });
+                                  (entry.savedMaterials || []).forEach(
+                                    (matId, slotIdx) => {
+                                      const mat =
+                                        matId != null
+                                          ? MATERIALS.find(
+                                            (m) => m.id === matId,
+                                          )
+                                          : null;
+                                      orderedSlots.push({
+                                        type: `${t("ingredientShort")} ${slotIdx + 1}`,
+                                        id: matId,
+                                        name:
+                                          mat?.name ||
+                                          (matId != null
+                                            ? `ID ${matId}`
+                                            : "—"),
+                                        needed:
+                                          matId != null
+                                            ? perMats[matId] || 1
+                                            : 0,
+                                      });
+                                    },
+                                  );
+                                  if (catObj && catObj.id !== "none")
+                                    orderedSlots.push({
+                                      type: t("catalystShort"),
+                                      id: catObj.id,
+                                      name: catObj.name,
+                                      needed: perMats[catObj.id] || 1,
+                                    });
+                                  const recipeAgent =
+                                    sessionAgents[recipeIdx] ?? null;
+                                  if (recipeAgent)
+                                    orderedSlots.push({
+                                      type: t("agentLabel"),
+                                      id: recipeAgent.id,
+                                      name: recipeAgent.name,
+                                      needed:
+                                        perMats[recipeAgent.id] || 1,
+                                    });
+                                  return orderedSlots.map((slot, i) => {
+                                    const inLager =
+                                      slot.id != null
+                                        ? parsedLager[slot.id] || 0
+                                        : 0;
+                                    const noLag = !hasLager;
+                                    const ok =
+                                      noLag ||
+                                      slot.id == null ||
+                                      inLager >= slot.needed;
+                                    const isEmpty = slot.id == null;
+                                    const matType =
+                                      slot.id != null
+                                        ? MATERIALS.find(
+                                          (m) => m.id === slot.id,
+                                        )?.type
+                                        : null;
+                                    return /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      {
+                                        key: i,
+                                        className: `flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs ${isEmpty ? "bg-slate-50 dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 text-slate-400" : noLag ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400" : ok ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"}`,
+                                      },
+                                        /*#__PURE__*/ React.createElement(
+                                        "span",
+                                        {
+                                          className:
+                                            "text-[9px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 w-16 flex-shrink-0",
+                                        },
+                                        slot.type,
+                                      ),
+                                      matType &&
+                                          /*#__PURE__*/ React.createElement(
+                                        "span",
+                                        {
+                                          className:
+                                            "text-[9px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded flex-shrink-0 w-10 text-center",
+                                        },
+                                        matType,
+                                      ),
+                                      !isEmpty &&
+                                          /*#__PURE__*/ React.createElement(
+                                        ItemIcon,
+                                        {
+                                          id: slot.id,
+                                          name: slot.name,
+                                          size: "w-4 h-4 flex-shrink-0",
+                                        },
+                                      ),
+                                        /*#__PURE__*/ React.createElement(
+                                        "span",
+                                        {
+                                          className:
+                                            "flex-1 font-semibold truncate",
+                                        },
+                                        slot.name,
+                                      ),
+                                      !isEmpty &&
+                                          /*#__PURE__*/ React.createElement(
+                                        "span",
+                                        {
+                                          className:
+                                            "font-black flex-shrink-0",
+                                        },
+                                        !noLag && inLager > 0
+                                          ? `${inLager} / `
+                                          : "",
+                                        slot.needed,
+                                      ),
+                                      !isEmpty &&
+                                      !noLag &&
+                                          /*#__PURE__*/ React.createElement(
+                                        "i",
+                                        {
+                                          className: `fa-solid ${ok ? "fa-circle-check" : "fa-circle-xmark"} text-xs flex-shrink-0`,
+                                        },
+                                      ),
+                                    );
+                                  });
+                                })(),
+                              ),
+                            );
+                          });
+                        })(),
+                      ),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      {
+                        className:
+                          "px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between flex-shrink-0",
+                      },
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: () => setSessionStep(3),
+                          className:
+                            "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
+                        },
+                        /*#__PURE__*/ React.createElement("i", {
+                          className: "fa-solid fa-arrow-left",
+                        }),
+                        " ",
+                        t("back"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: sessionGoToStep5,
+                          className:
+                            "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-500 hover:bg-indigo-600 text-white transition-colors",
+                        },
+                        t("next"),
+                        " ",
+                        /*#__PURE__*/ React.createElement("i", {
+                          className: "fa-solid fa-arrow-right",
+                        }),
+                      ),
+                    ),
+                  ),
+              ),
+              sessionStep === 5 &&
+                  /*#__PURE__*/ React.createElement(
+                React.Fragment,
+                null,
                     /*#__PURE__*/ React.createElement(
                   "div",
                   {
@@ -6283,7 +6927,7 @@ function App() {
                       className:
                         "text-sm text-slate-500 dark:text-slate-400",
                     },
-                    t("step4Desc"),
+                    t("step5Desc"),
                   ),
                 ),
                 simplifiedDelivery
@@ -6291,7 +6935,7 @@ function App() {
                     // Vereinfachte Ansicht: 2x2 Karten füllen die verfügbare Fläche
                     const selectedCount =
                       sessionDelivery.filter(Boolean).length;
-                    const maxSelect = sessionRecipes.length;
+                    const maxSelect = sessionRecipes.filter((r) => !r.parentId).length;
                     const selectedKeys = sessionDelivery
                       .filter(Boolean)
                       .map((n) => n.key);
@@ -6403,6 +7047,7 @@ function App() {
                         className: "space-y-5",
                       },
                       sessionRecipes.map((entry, recipeIdx) => {
+                        if (entry.parentId) return null;
                         const recipe = [
                           ...RECIPES,
                           ...customRecipes,
@@ -6646,7 +7291,7 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: () => setSessionStep(3),
+                        onClick: () => setSessionStep(4),
                         className:
                           "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
                       },
@@ -6659,7 +7304,7 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: () => setSessionStep(5),
+                        onClick: () => setSessionStep(6),
                         className:
                           "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-indigo-500 hover:bg-indigo-600 text-white transition-colors",
                       },
@@ -6671,7 +7316,7 @@ function App() {
                     ),
                   ),
               ),
-              sessionStep === 5 &&
+              sessionStep === 6 &&
                   /*#__PURE__*/ React.createElement(
                 React.Fragment,
                 null,
@@ -6885,7 +7530,7 @@ function App() {
                             tabForNpc(sessionDelivery[i] ?? null),
                           ),
                         );
-                        setSessionStep(4);
+                        setSessionStep(5);
                       },
                       className:
                         "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
