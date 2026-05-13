@@ -1,4 +1,3 @@
-﻿
 window.ALL_ITEMS = [
   ...MATERIALS,
   ...CATALYSTS.filter((c) => c.id !== "none"),
@@ -136,19 +135,19 @@ window.findBestIngredients = (
           Math.pow(qs[1] - othersAvg, 2) +
           Math.pow(qs[2] - othersAvg, 2) +
           Math.pow(qs[3] - othersAvg, 2);
-        // Lager-Bonus: Zutaten mit mehr Bestand bevorzugen (hÃ¯Â¿Â½here Menge = niedrigerer Penalty)
+        // Lager-Bonus: Zutaten mit mehr Bestand bevorzugen (hï¿½here Menge = niedrigerer Penalty)
         const lagerPenalty = currentCombo.reduce((sum, m) => {
           const amt = lager[m.id] || 0;
           return sum + Math.max(0, 1000 - amt);
         }, 0);
-        // Element-Malus: Zutaten bestrafen, deren primÃ¤res Element NICHT dem Rezept-Element entspricht
+        // Element-Malus: Zutaten bestrafen, deren primäres Element NICHT dem Rezept-Element entspricht
         const nonMatchPenalty =
           currentCombo.reduce((sum, m) => {
             const mMax = Math.max(m.fire, m.earth, m.air, m.water);
             const primaryMatches = mMax > 0 && m[recipeEl] === mMax;
             return sum + (primaryMatches ? 0 : 1);
           }, 0) * 1e15;
-        // PrimÃ¤r: Element-Ãœbereinstimmung; sekundÃ¤r: qualitySum; tertiÃ¤r: variance; quartÃ¤r: lagerPenalty
+        // Primär: Element-Übereinstimmung; sekundär: qualitySum; tertiär: variance; quartär: lagerPenalty
         const score =
           nonMatchPenalty +
           qualitySum * 100000000 +
@@ -244,7 +243,7 @@ window.findBestIngredients = (
 
 // Fallback-Kette: (1) ignoreEmpty + kein Agent, (2) ignoreEmpty + Agent,
 // (3) !ignoreEmpty + kein Agent, (4) !ignoreEmpty + Agent
-// Gibt { combo, agent } zurÃ¼ck â€” agent ist null wenn kein Auto-Agent gebraucht wurde
+// Gibt { combo, agent } zurück — agent ist null wenn kein Auto-Agent gebraucht wurde
 window.findBestIngredientsWithFallback = (
   recipe,
   lager,
@@ -363,6 +362,7 @@ window.writeStateCookie = (data) => {
     encodeURIComponent(JSON.stringify(data)) +
     "; path=/; max-age=31536000";
 };
+
 const { useState, useMemo, useEffect } = React;
 const ItemIcon = ({ id, name, size = "w-8 h-8", className = "" }) => {
   const src = ICON_DB[id] || null;
@@ -770,7 +770,7 @@ function App() {
   const [sessionAgents, setSessionAgents] = useState(() => {
     const id = _savedSession?.agentId ?? null;
     const agent = id != null ? AGENTS.find((a) => a.id === id) || null : null;
-    // legacy: single agentId â†’ put in slot 0; new: agentIds array
+    // legacy: single agentId → put in slot 0; new: agentIds array
     if (_savedSession?.agentIds)
       return _savedSession.agentIds.map((aid) =>
         aid != null ? AGENTS.find((a) => a.id === aid) || null : null,
@@ -881,11 +881,11 @@ function App() {
       const flat = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
       // Collect candidates, counting occurrences per flat-form.
-      // We use a Map<flatString â†’ {bestText, count}> so that:
+      // We use a Map<flatString → {bestText, count}> so that:
       //   - OCR artifacts ("Garms Essence" vs "Garm's Essence") share one flat-key
       //     and are counted as ONE item (same recipe, OCR noise)
-      //   - Genuinely repeated entries ("Water Stone" Ã— 2) get count=2
-      const candidateMap = new Map(); // flat â†’ { bestText, count }
+      //   - Genuinely repeated entries ("Water Stone" × 2) get count=2
+      const candidateMap = new Map(); // flat → { bestText, count }
 
       const addCandidate = (raw, countable) => {
         const text2 = raw.trim();
@@ -905,7 +905,7 @@ function App() {
       };
 
       // Strategy 1: anything in parentheses starting with a capital letter
-      // e.g. "(Energy Ore)" â€” most reliable for this game UI
+      // e.g. "(Energy Ore)" — most reliable for this game UI
       // countable=true: each paren occurrence = one real recipe slot
       const parenRe = /\(([A-Z][^)\n]{1,45})\)/g;
       let m;
@@ -928,7 +928,7 @@ function App() {
       const dedupedCandidates = [...candidateMap.values()];
       console.log(
         "[OCR candidates]",
-        dedupedCandidates.map((c) => `${c.bestText}Ã—${c.count}`),
+        dedupedCandidates.map((c) => `${c.bestText}×${c.count}`),
       );
       const allRecipes = [...RECIPES, ...customRecipes];
       console.log(
@@ -938,7 +938,7 @@ function App() {
       );
       let found = 0;
       const ocrQueue = []; // ordered: {type:'exact',recipeId} | {type:'ambiguous',text,matches}
-      // We do NOT block duplicates â€” the user wants them.
+      // We do NOT block duplicates — the user wants them.
       dedupedCandidates.forEach(({ bestText: name, count }) => {
         if (ocrQueue.length >= 5) return;
         const nNorm = norm(name);
@@ -976,7 +976,7 @@ function App() {
             });
         });
         if (allMatches.length === 0) {
-          console.log(`[OCR no-match] "${name}" â†’ no recipe within threshold`);
+          console.log(`[OCR no-match] "${name}" → no recipe within threshold`);
           return;
         }
         allMatches.sort((a, b) => a.score - b.score);
@@ -989,14 +989,14 @@ function App() {
           return true;
         });
 
-        // Eindeutig wenn: bester Score 0 (exakt) oder bester Score deutlich besser als der nÃ¤chste
+        // Eindeutig wenn: bester Score 0 (exakt) oder bester Score deutlich besser als der nächste
         const singleExact =
           unique[0].score === 0
             ? unique.length === 1 || unique[1].score > 0
             : unique.length === 1 || unique[0].score * 2.5 < unique[1].score;
         if (unique.length === 1 || singleExact) {
           const best = unique[0].recipe;
-          // Push once per occurrence (e.g. Water Stone Ã—2 â†’ 2 queue entries)
+          // Push once per occurrence (e.g. Water Stone ×2 → 2 queue entries)
           const times = Math.min(count, 5 - ocrQueue.length);
           for (let i = 0; i < times; i++)
             ocrQueue.push({
@@ -1007,12 +1007,12 @@ function App() {
             ? ` (runner-up: "${unique[1].recipe.product}" score=${unique[1].score.toFixed(2)})`
             : " (sole match)";
           console.log(
-            `[OCR match] "${name}" Ã—${count} â†’ "${best.product}" | score=${unique[0].score.toFixed(2)}${runner_up}`,
+            `[OCR match] "${name}" ×${count} → "${best.product}" | score=${unique[0].score.toFixed(2)}${runner_up}`,
           );
           found += times;
         } else {
           console.log(
-            `[OCR ambiguous] "${name}" â†’ top matches:`,
+            `[OCR ambiguous] "${name}" → top matches:`,
             unique
               .slice(0, 5)
               .map((m) => `"${m.recipe.product}" score=${m.score.toFixed(2)}`),
@@ -1122,7 +1122,7 @@ function App() {
           break;
         }
       }
-      if (!blob) return; // no image â†’ don't intercept (allow normal paste)
+      if (!blob) return; // no image → don't intercept (allow normal paste)
       e.preventDefault();
       setSessionRecipes([]);
       setOcrState("loading");
@@ -1185,7 +1185,7 @@ function App() {
     return map;
   };
   const [parsedLager, setParsedLager] = useState(() => {
-    // Immer aus Rohtext parsen, damit neu hinzugefÃ¼gte Item-Typen (z.B. Agents) erkannt werden
+    // Immer aus Rohtext parsen, damit neu hinzugefügte Item-Typen (z.B. Agents) erkannt werden
     try {
       const text = localStorage.getItem("alchemyLager") || "";
       if (text) return parseLagerText(text);
@@ -1287,7 +1287,7 @@ function App() {
     disabledItems,
   ]);
   const startSession = () => {
-    // Wenn bereits eine Session lÃ¤uft, diese fortsetzen
+    // Wenn bereits eine Session läuft, diese fortsetzen
     if (sessionRecipes.length > 0) {
       setSessionOpen(true);
       return;
@@ -1317,7 +1317,7 @@ function App() {
     });
   };
   const sessionGoToStep2 = () => {
-    // FÃ¼r jedes Rezept beste Zutaten vorbelegen (mit Agent-Fallback)
+    // Für jedes Rezept beste Zutaten vorbelegen (mit Agent-Fallback)
     const agentUpdates = [];
     const newRecipes = sessionRecipes.map((entry, idx) => {
       if (entry.savedMaterials && entry.savedMaterials.some((id) => id != null))
@@ -1337,7 +1337,7 @@ function App() {
         const existingAgent = sessionAgents[idx] ?? null;
         let combo;
         if (existingAgent) {
-          // Bereits Agent gewÃ¤hlt: direkt mit diesem suchen
+          // Bereits Agent gewählt: direkt mit diesem suchen
           combo =
             findBestIngredients(
               recipe,
@@ -1486,7 +1486,7 @@ function App() {
     }
   };
   const sessionGoToStep3 = () => {
-    // Aktuellen Kessel fÃ¯Â¿Â½r aktives Rezept sichern
+    // Aktuellen Kessel fï¿½r aktives Rezept sichern
     setSessionRecipes((prev) =>
       prev.map((e, i) =>
         i === sessionActiveIdx
@@ -1500,7 +1500,7 @@ function App() {
     setSessionStep(3);
   };
 
-  // Berechnet den Tab-Index, der den gewÃ¤hlten NPC enthÃ¤lt (Fallback: 0)
+  // Berechnet den Tab-Index, der den gewählten NPC enthält (Fallback: 0)
   const tabForNpc = (npc) => {
     if (!npc) return 0;
     const idx = DELIVERY_LOCATIONS.findIndex((loc) =>
@@ -1509,13 +1509,13 @@ function App() {
     return idx >= 0 ? idx : 0;
   };
   const sessionGoToStep4 = () => {
-    // Delivery-Array initialisieren: ein Eintrag pro Rezept (null = noch nicht gewÃ¯Â¿Â½hlt)
+    // Delivery-Array initialisieren: ein Eintrag pro Rezept (null = noch nicht gewï¿½hlt)
     setSessionDelivery((prev) => {
       const arr = [...prev];
       while (arr.length < sessionRecipes.length) arr.push(null);
       return arr.slice(0, sessionRecipes.length);
     });
-    // Pro Rezept: Tab auf Location des gewÃ¯Â¿Â½hlten NPC setzen (oder 0)
+    // Pro Rezept: Tab auf Location des gewï¿½hlten NPC setzen (oder 0)
     setSessionDeliveryTab(
       sessionRecipes.map((_, i) => tabForNpc(sessionDelivery[i] ?? null)),
     );
@@ -1538,7 +1538,7 @@ function App() {
     try {
       localStorage.removeItem("alchemySession");
     } catch { }
-    // Session-State vollstÃ¤ndig zurÃ¼cksetzen
+    // Session-State vollständig zurücksetzen
     setSessionRecipes([]);
     setSessionStep(1);
     setSessionMaxStep(1);
@@ -1572,7 +1572,7 @@ function App() {
     cartOpen,
   ]);
 
-  // Swap-Slot-Original zurÃ¼cksetzen wenn Rezept oder Modus wechselt
+  // Swap-Slot-Original zurücksetzen wenn Rezept oder Modus wechselt
   useEffect(() => {
     _swapOriginalRef.current = null;
     _swapLastSlot.current = null;
@@ -1659,7 +1659,7 @@ function App() {
       if (!recipe) return;
       let materials;
       if (savedMaterials && savedMaterials.some((id) => id != null)) {
-        // Gespeicherte (ggf. manuell geÃ¯Â¿Â½nderte) Rezeptur verwenden
+        // Gespeicherte (ggf. manuell geï¿½nderte) Rezeptur verwenden
         materials = savedMaterials
           .map((id) => (id != null ? MATERIALS.find((m) => m.id === id) : null))
           .filter(Boolean);
@@ -1744,7 +1744,7 @@ function App() {
     setCart([]);
   };
 
-  // Wenn der Kessel sich Ã¯Â¿Â½ndert und das aktive Rezept im Korb ist, savedMaterials aktualisieren
+  // Wenn der Kessel sich ï¿½ndert und das aktive Rezept im Korb ist, savedMaterials aktualisieren
   useEffect(() => {
     if (!selectedRecipe) return;
     setCart((prev) => {
@@ -1795,7 +1795,7 @@ function App() {
     };
     let updated;
     if (activeCustomRecipeId) {
-      // Vorhandenes Rezept Ã¯Â¿Â½berschreiben
+      // Vorhandenes Rezept ï¿½berschreiben
       updated = customRecipes.map((r) =>
         r.id === activeCustomRecipeId
           ? {
@@ -1814,7 +1814,7 @@ function App() {
           ...recipeData,
         },
       ];
-      // Nicht auf das neue Rezept wechseln â€“ stattdessen sofort fÃ¼r das nÃ¤chste Rezept zurÃ¼cksetzen
+      // Nicht auf das neue Rezept wechseln – stattdessen sofort für das nächste Rezept zurücksetzen
     }
     setCustomRecipes(updated);
     writeCustomRecipes(updated);
@@ -1822,7 +1822,7 @@ function App() {
     setSaveRecipeName("");
     const wasNew = !activeCustomRecipeId;
     if (wasNew) {
-      // War ein neues Rezept â†’ Felder leeren fÃ¼r das nÃ¤chste
+      // War ein neues Rezept → Felder leeren für das nächste
       setActiveCustomRecipeId(null);
       setCauldron([null, null, null, null]);
       setCustomSlotTypes([null, null, null, null]);
@@ -4628,7 +4628,7 @@ function App() {
                                     "text-[10px] font-bold text-slate-400 uppercase",
                                 },
                                 slotIdx === 0
-                                  ? `${t("ingredientShort")} 1 Ã—2`
+                                  ? `${t("ingredientShort")} 1 ×2`
                                   : `${t("ingredientShort")} ${slotIdx + 1}`,
                               ),
                                     /*#__PURE__*/ React.createElement(
@@ -5340,7 +5340,7 @@ function App() {
                                           {
                                             className: "text-white",
                                           },
-                                          dom === "None" ? "â€“" : dom,
+                                          dom === "None" ? "–" : dom,
                                         ),
                                         ", ben\xF6tigt: ",
                                                   /*#__PURE__*/ React.createElement(
@@ -5519,7 +5519,7 @@ function App() {
                         onClick: sessionGoToStep3,
                         disabled: !allValid,
                         title: !allValid
-                          ? "Nicht alle Rezepte erfÃ¯Â¿Â½llen die Anforderungen"
+                          ? "Nicht alle Rezepte erfï¿½llen die Anforderungen"
                           : "",
                         className: `flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors ${allValid ? "bg-green-500 hover:bg-green-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`,
                       },
@@ -5680,7 +5680,7 @@ function App() {
                                       mat?.name ||
                                       (matId != null
                                         ? `ID ${matId}`
-                                        : "â€”"),
+                                        : "—"),
                                     needed:
                                       matId != null
                                         ? perMats[matId] || 1
@@ -6129,7 +6129,7 @@ function App() {
                 ),
                 simplifiedDelivery
                   ? (() => {
-                    // Vereinfachte Ansicht: 2x2 Karten fÃ¼llen die verfÃ¼gbare FlÃ¤che
+                    // Vereinfachte Ansicht: 2x2 Karten füllen die verfügbare Fläche
                     const selectedCount =
                       sessionDelivery.filter(Boolean).length;
                     const maxSelect = sessionRecipes.length;
@@ -6185,7 +6185,7 @@ function App() {
                               "text-xs text-red-500 dark:text-red-400 hover:underline",
                           },
                           lang === "de"
-                            ? "Auswahl zurÃ¼cksetzen"
+                            ? "Auswahl zurücksetzen"
                             : "Reset selection",
                         ),
                       ),
@@ -6785,7 +6785,7 @@ function App() {
                               );
                             } catch { }
                           }
-                          // Session zurÃ¼cksetzen, Modal bleibt offen
+                          // Session zurücksetzen, Modal bleibt offen
                           try {
                             localStorage.removeItem("alchemySession");
                           } catch { }
@@ -6890,7 +6890,7 @@ function App() {
                               "text-slate-400 dark:text-slate-500 font-normal",
                           },
                           lang === "de"
-                            ? "BenÃ¶tigtes Element:"
+                            ? "Benötigtes Element:"
                             : "Required Element:",
                         ),
                         " ",
@@ -6898,11 +6898,11 @@ function App() {
                           "span",
                           {
                             className: `${{
-                                fire: "text-red-500",
-                                earth: "text-green-600",
-                                air: "text-yellow-500",
-                                water: "text-blue-500",
-                              }[reqElement] ?? "text-slate-500"
+                              fire: "text-red-500",
+                              earth: "text-green-600",
+                              air: "text-yellow-500",
+                              water: "text-blue-500",
+                            }[reqElement] ?? "text-slate-500"
                               }`,
                           },
                           "[",
