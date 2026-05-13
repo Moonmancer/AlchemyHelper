@@ -966,6 +966,53 @@ function App() {
       }));
     } catch {}
   }, [sessionOpen, sessionStep, sessionRecipes, sessionActiveIdx, sessionCauldron, sessionAgents, sessionDelivery]);
+  const [lagerText, setLagerText] = useState(() => {
+    try {
+      return localStorage.getItem('alchemyLager') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [lagerOpen, setLagerOpen] = useState(false);
+  const lagerHovered = React.useRef(false);
+  const parseLagerText = text => {
+    const map = {};
+    const materialIds = new Set([...MATERIALS.map(m => m.id), ...CATALYSTS.filter(c => c.id !== 'none').map(c => c.id), ...POTION_BASE.map(p => p.id), ...AGENTS.map(a => a.id)]);
+    text.split('\n').forEach(line => {
+      const parts = line.trim().split('\t');
+      if (parts.length < 3) return;
+      const id = parseInt(parts[0]);
+      const amount = parseInt(parts[2].replace(/[.,]/g, '').replace(/\s/g, ''));
+      if (isNaN(id) || isNaN(amount)) return;
+      if (!materialIds.has(id)) return;
+      map[id] = (map[id] || 0) + amount;
+    });
+    return map;
+  };
+  const [parsedLager, setParsedLager] = useState(() => {
+    // Immer aus Rohtext parsen, damit neu hinzugefügte Item-Typen (z.B. Agents) erkannt werden
+    try {
+      const text = localStorage.getItem('alchemyLager') || '';
+      if (text) return parseLagerText(text);
+    } catch {}
+    try {
+      const stored = localStorage.getItem('alchemyLagerData');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
+  const saveLager = text => {
+    setLagerText(text);
+    const map = parseLagerText(text);
+    setParsedLager(map);
+    try {
+      localStorage.setItem('alchemyLager', text);
+    } catch {}
+    try {
+      localStorage.setItem('alchemyLagerData', JSON.stringify(map));
+    } catch {}
+    return map;
+  };
   const sessionAllMaterials = React.useMemo(() => {
     const matNeeded = {};
     sessionRecipes.forEach(({
@@ -1230,53 +1277,6 @@ function App() {
     _sessionSwapLastSlot.current = null;
     setSessionSwapOriginalItem(null);
   }, [sessionActiveIdx]);
-  const [lagerText, setLagerText] = useState(() => {
-    try {
-      return localStorage.getItem('alchemyLager') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [lagerOpen, setLagerOpen] = useState(false);
-  const lagerHovered = React.useRef(false);
-  const parseLagerText = text => {
-    const map = {};
-    const materialIds = new Set([...MATERIALS.map(m => m.id), ...CATALYSTS.filter(c => c.id !== 'none').map(c => c.id), ...POTION_BASE.map(p => p.id), ...AGENTS.map(a => a.id)]);
-    text.split('\n').forEach(line => {
-      const parts = line.trim().split('\t');
-      if (parts.length < 3) return;
-      const id = parseInt(parts[0]);
-      const amount = parseInt(parts[2].replace(/[.,]/g, '').replace(/\s/g, ''));
-      if (isNaN(id) || isNaN(amount)) return;
-      if (!materialIds.has(id)) return;
-      map[id] = (map[id] || 0) + amount;
-    });
-    return map;
-  };
-  const [parsedLager, setParsedLager] = useState(() => {
-    // Immer aus Rohtext parsen, damit neu hinzugefügte Item-Typen (z.B. Agents) erkannt werden
-    try {
-      const text = localStorage.getItem('alchemyLager') || '';
-      if (text) return parseLagerText(text);
-    } catch {}
-    try {
-      const stored = localStorage.getItem('alchemyLagerData');
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return {};
-  });
-  const saveLager = text => {
-    setLagerText(text);
-    const map = parseLagerText(text);
-    setParsedLager(map);
-    try {
-      localStorage.setItem('alchemyLager', text);
-    } catch {}
-    try {
-      localStorage.setItem('alchemyLagerData', JSON.stringify(map));
-    } catch {}
-    return map;
-  };
   const [lagerPasteToast, setLagerPasteToast] = useState(null);
   const lagerPasteToastTimer = React.useRef(null);
   const [saveSuccessToast, setSaveSuccessToast] = React.useState(null);
