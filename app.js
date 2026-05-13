@@ -495,10 +495,10 @@ function App() {
   const toggleDisabledItem = id => {
     setDisabledItems(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       try {
         localStorage.setItem('alchemyDisabledItems', JSON.stringify([...next]));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -516,7 +516,7 @@ function App() {
     setLowStockThreshold(n);
     try {
       localStorage.setItem('alchemyLowStockThreshold', String(n));
-    } catch {}
+    } catch { }
   };
   const [simplifiedDelivery, setSimplifiedDelivery] = useState(() => {
     try {
@@ -530,7 +530,7 @@ function App() {
       const next = !prev;
       try {
         localStorage.setItem('alchemySimplifiedDelivery', next ? '1' : '0');
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -546,7 +546,7 @@ function App() {
       const next = !prev;
       try {
         localStorage.setItem('alchemyIgnoreEmptyItems', next ? '1' : '0');
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -561,7 +561,7 @@ function App() {
     setMatSplitMode(mode);
     try {
       localStorage.setItem('alchemySplitMode', mode);
-    } catch {}
+    } catch { }
   };
   const getStorageType = id => MATERIALS.find(m => m.id === id)?.type === 'Food' || id === 609 || id === 645 || id === 656 || id === 657 ? 'usable' : 'etc';
   const [selectedAgent, setSelectedAgent] = useState(() => {
@@ -664,7 +664,7 @@ function App() {
   const copyNavi = (npc, key) => {
     const parts = npc.navi.split(' ');
     const cmd = `/navi ${parts[0]} ${parts[1]}/${parts[2]}`;
-    navigator.clipboard.writeText(cmd).catch(() => {});
+    navigator.clipboard.writeText(cmd).catch(() => { });
     setCopiedNaviKey(key);
     setTimeout(() => setCopiedNaviKey(null), 2000);
   };
@@ -964,7 +964,7 @@ function App() {
         agentIds: sessionAgents.map(a => a?.id ?? null),
         delivery: sessionDelivery
       }));
-    } catch {}
+    } catch { }
   }, [sessionOpen, sessionStep, sessionRecipes, sessionActiveIdx, sessionCauldron, sessionAgents, sessionDelivery]);
   const [lagerText, setLagerText] = useState(() => {
     try {
@@ -994,11 +994,11 @@ function App() {
     try {
       const text = localStorage.getItem('alchemyLager') || '';
       if (text) return parseLagerText(text);
-    } catch {}
+    } catch { }
     try {
       const stored = localStorage.getItem('alchemyLagerData');
       if (stored) return JSON.parse(stored);
-    } catch {}
+    } catch { }
     return {};
   });
   const saveLager = text => {
@@ -1007,10 +1007,10 @@ function App() {
     setParsedLager(map);
     try {
       localStorage.setItem('alchemyLager', text);
-    } catch {}
+    } catch { }
     try {
       localStorage.setItem('alchemyLagerData', JSON.stringify(map));
-    } catch {}
+    } catch { }
     return map;
   };
   const sessionAllMaterials = React.useMemo(() => {
@@ -1237,10 +1237,10 @@ function App() {
     setParsedLager(newMap);
     try {
       localStorage.setItem('alchemyLagerData', JSON.stringify(newMap));
-    } catch {}
+    } catch { }
     try {
       localStorage.removeItem('alchemySession');
-    } catch {}
+    } catch { }
     // Session-State vollständig zurücksetzen
     setSessionRecipes([]);
     setSessionStep(1);
@@ -1411,7 +1411,7 @@ function App() {
     setParsedLager(newMap);
     try {
       localStorage.setItem('alchemyLagerData', JSON.stringify(newMap));
-    } catch {}
+    } catch { }
     setCart([]);
   };
 
@@ -2169,7 +2169,7 @@ function App() {
     const lagerAmt = parsedLager[material.id] || 0;
     let dynamicBg = "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500";
     if (maxStat > 0) {
-      if (maxStat === material.fire) dynamicBg = "bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-500";else if (maxStat === material.earth) dynamicBg = "bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 hover:border-green-400 dark:hover:border-green-500";else if (maxStat === material.air) dynamicBg = "bg-yellow-50/80 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400 dark:hover:border-yellow-500";else dynamicBg = "bg-blue-50/80 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 hover:border-blue-400 dark:hover:border-blue-500";
+      if (maxStat === material.fire) dynamicBg = "bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400 dark:hover:border-red-500"; else if (maxStat === material.earth) dynamicBg = "bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 hover:border-green-400 dark:hover:border-green-500"; else if (maxStat === material.air) dynamicBg = "bg-yellow-50/80 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400 dark:hover:border-yellow-500"; else dynamicBg = "bg-blue-50/80 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 hover:border-blue-400 dark:hover:border-blue-500";
     }
     return /*#__PURE__*/React.createElement("button", {
       key: material.id,
@@ -2403,7 +2403,7 @@ function App() {
       setDisabledItems(new Set());
       try {
         localStorage.setItem('alchemyDisabledItems', '[]');
-      } catch {}
+      } catch { }
     },
     className: "px-3 py-1.5 text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors"
   }, t('settingsReset'), " (", disabledItems.size, ")"), /*#__PURE__*/React.createElement("button", {
@@ -2551,7 +2551,7 @@ function App() {
       if (!window.confirm(lang === 'de' ? 'Session wirklich verwerfen?' : 'Really discard session?')) return;
       try {
         localStorage.removeItem('alchemySession');
-      } catch {}
+      } catch { }
       setSessionRecipes([]);
       setSessionStep(1);
       setSessionMaxStep(1);
@@ -3501,7 +3501,7 @@ function App() {
       chosen: entries.length === 1 ? entries[0].chosen : null,
       highlightedKeys: entries.map(e => e.chosen.key),
       onlyHighlighted: true,
-      onSelect: () => {}
+      onSelect: () => { }
     }), /*#__PURE__*/React.createElement("div", {
       className: "p-2 space-y-1.5"
     }, entries.map(({
@@ -3570,12 +3570,12 @@ function App() {
         setParsedLager(newMap);
         try {
           localStorage.setItem('alchemyLagerData', JSON.stringify(newMap));
-        } catch {}
+        } catch { }
       }
       // Session zurücksetzen, Modal bleibt offen
       try {
         localStorage.removeItem('alchemySession');
-      } catch {}
+      } catch { }
       setSessionRecipes([]);
       setSessionStep(1);
       setSessionMaxStep(1);
@@ -3702,7 +3702,7 @@ function App() {
       const lagerAmt = parsedLager[material.id] || 0;
       let dynamicBg = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400';
       if (maxStat > 0) {
-        if (material.fire === maxStat) dynamicBg = 'bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400';else if (material.earth === maxStat) dynamicBg = 'bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 hover:border-green-400';else if (material.air === maxStat) dynamicBg = 'bg-yellow-50/80 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400';else dynamicBg = 'bg-blue-50/80 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 hover:border-blue-400';
+        if (material.fire === maxStat) dynamicBg = 'bg-red-50/80 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 hover:border-red-400'; else if (material.earth === maxStat) dynamicBg = 'bg-green-50/80 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 hover:border-green-400'; else if (material.air === maxStat) dynamicBg = 'bg-yellow-50/80 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400'; else dynamicBg = 'bg-blue-50/80 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 hover:border-blue-400';
       }
       return /*#__PURE__*/React.createElement("button", {
         key: material.id,
