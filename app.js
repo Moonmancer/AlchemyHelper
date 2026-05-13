@@ -577,7 +577,7 @@ function App() {
   const [swapQualityFilter, setSwapQualityFilter] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const match = document.cookie.match(/(?:^|; )darkMode=([^;]*)/);
-    return match ? match[1] === "1" : false;
+    return match ? match[1] === "1" : true;
   });
   const [lang, setLang] = useState(() => {
     const m = document.cookie.match(/(?:^|; )lang=([^;]*)/);
@@ -4850,7 +4850,6 @@ function App() {
                             )
                             : [];
                           const showCraftPlus =
-                            Object.keys(parsedLager).length > 0 &&
                             slot &&
                             lagerAmt === 0 &&
                             craftableRecipes.length > 0;
