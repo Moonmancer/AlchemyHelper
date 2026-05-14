@@ -7249,11 +7249,31 @@ function App() {
                         t("back"),
                       ),
                       (() => {
+                        const craftingOkIds = new Set();
+                        sessionRecipes.forEach((entry) => {
+                          if (!entry.parentId) return;
+                          const r = [...RECIPES, ...customRecipes].find(
+                            (rx) => rx.id === entry.recipeId,
+                          );
+                          if (!r?.product) return;
+                          const found =
+                            MATERIALS.find((m) => m.name === r.product) ||
+                            AGENTS.find((a) => a.name === r.product) ||
+                            CATALYSTS.find(
+                              (c) => c.id !== "none" && c.name === r.product,
+                            );
+                          if (found) craftingOkIds.add(found.id);
+                        });
                         const allOk =
                           Object.keys(parsedLager).length === 0 ||
                           Object.entries(sessionAllMaterials).every(
-                            ([idStr, needed]) =>
-                              (parsedLager[parseInt(idStr)] || 0) >= needed,
+                            ([idStr, needed]) => {
+                              const id = parseInt(idStr);
+                              return (
+                                (parsedLager[id] || 0) >= needed ||
+                                craftingOkIds.has(id)
+                              );
+                            },
                           );
                         const has = Object.keys(sessionAllMaterials).length > 0;
                         return /*#__PURE__*/ React.createElement(
@@ -7384,6 +7404,52 @@ function App() {
                                 name: ra.name,
                                 needed: pm[ra.id] || 1,
                               });
+                            const { labelWidth, badgeWidth } = (() => {
+                              const canvas = document.createElement("canvas");
+                              const ctx = canvas.getContext("2d");
+                              const ls = 0.025 * 20;
+                              ctx.font =
+                                "900 20px ui-sans-serif, system-ui, sans-serif";
+                              const maxLabel = slots.reduce((max, slot) => {
+                                const text = (slot.type || "").toUpperCase();
+                                const w =
+                                  ctx.measureText(text).width +
+                                  text.length * ls;
+                                return w > max ? w : max;
+                              }, 0);
+                              ctx.font =
+                                "600 20px ui-sans-serif, system-ui, sans-serif";
+                              const maxBadge = slots.reduce((max, slot) => {
+                                const mt =
+                                  slot.id != null
+                                    ? MATERIALS.find((m) => m.id === slot.id)
+                                        ?.type
+                                    : null;
+                                if (!mt) return max;
+                                const w = ctx.measureText(mt).width;
+                                return w > max ? w : max;
+                              }, 0);
+                              return {
+                                labelWidth: maxLabel,
+                                badgeWidth: maxBadge,
+                              };
+                            })();
+                            const craftingOkIds = new Set();
+                            sessionRecipes.forEach((entry) => {
+                              if (!entry.parentId) return;
+                              const r = [...RECIPES, ...customRecipes].find(
+                                (rx) => rx.id === entry.recipeId,
+                              );
+                              if (!r?.product) return;
+                              const found =
+                                MATERIALS.find((m) => m.name === r.product) ||
+                                AGENTS.find((a) => a.name === r.product) ||
+                                CATALYSTS.find(
+                                  (c) =>
+                                    c.id !== "none" && c.name === r.product,
+                                );
+                              if (found) craftingOkIds.add(found.id);
+                            });
                             return slots.map((slot, i) => {
                               const inLager =
                                 slot.id != null ? parsedLager[slot.id] || 0 : 0;
@@ -7393,6 +7459,8 @@ function App() {
                                 slot.id == null ||
                                 inLager >= slot.needed;
                               const isEmpty = slot.id == null;
+                              const isCraftable =
+                                !ok && !isEmpty && craftingOkIds.has(slot.id);
                               const matType =
                                 slot.id != null
                                   ? MATERIALS.find((m) => m.id === slot.id)
@@ -7402,56 +7470,70 @@ function App() {
                                 "div",
                                 {
                                   key: i,
-                                  className: `flex items-center gap-1.5 px-2 py-1.5 rounded-lg border ${isEmpty ? "bg-slate-50 dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 text-slate-400" : noLag ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400" : ok ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"}`,
+                                  className: `grid items-center gap-x-2 px-2 py-1.5 rounded-lg border ${isEmpty ? "bg-slate-50 dark:bg-slate-800 border-dashed border-slate-200 dark:border-slate-700 text-slate-400" : noLag ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400" : ok ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400" : isCraftable ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400"}`,
+                                  style: {
+                                    gridTemplateColumns: `${Math.ceil(labelWidth) + 8}px ${badgeWidth > 0 ? Math.ceil(badgeWidth) + 16 : 0}px 1fr`,
+                                  },
                                 },
                                 /*#__PURE__*/ React.createElement(
                                   "span",
                                   {
                                     className:
-                                      "text-[9px] font-black uppercase tracking-wide text-slate-400 dark:text-slate-500 w-16 flex-shrink-0",
+                                      "text-xl font-black uppercase tracking-wide text-slate-400 dark:text-slate-500",
                                   },
                                   slot.type,
                                 ),
-                                matType &&
-                                  /*#__PURE__*/ React.createElement(
-                                    "span",
-                                    {
-                                      className:
-                                        "text-[9px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded flex-shrink-0 w-10 text-center",
-                                    },
-                                    matType,
-                                  ),
-                                !isEmpty &&
-                                  /*#__PURE__*/ React.createElement(ItemIcon, {
-                                    id: slot.id,
-                                    name: slot.name,
-                                    size: "w-5 h-5 flex-shrink-0",
-                                  }),
+                                matType
+                                  ? /*#__PURE__*/ React.createElement(
+                                      "span",
+                                      {
+                                        className:
+                                          "text-xl font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1 rounded text-center",
+                                      },
+                                      matType,
+                                    )
+                                  : /*#__PURE__*/ React.createElement("span"),
                                 /*#__PURE__*/ React.createElement(
-                                  "span",
+                                  "div",
                                   {
                                     className:
-                                      "flex-1 text-sm font-semibold truncate",
+                                      "flex items-center gap-1.5 min-w-0",
                                   },
-                                  slot.name,
-                                ),
-                                !isEmpty &&
+                                  !isEmpty &&
+                                    /*#__PURE__*/ React.createElement(
+                                      ItemIcon,
+                                      {
+                                        id: slot.id,
+                                        name: slot.name,
+                                        size: "w-6 h-6 flex-shrink-0",
+                                      },
+                                    ),
                                   /*#__PURE__*/ React.createElement(
                                     "span",
                                     {
                                       className:
-                                        "text-sm font-black flex-shrink-0",
+                                        "flex-1 text-3xl font-semibold truncate",
                                     },
-                                    !noLag && inLager > 0
-                                      ? `${inLager} / `
-                                      : "",
-                                    slot.needed,
+                                    slot.name,
                                   ),
-                                !isEmpty &&
-                                  !noLag &&
-                                  /*#__PURE__*/ React.createElement("i", {
-                                    className: `fa-solid ${ok ? "fa-circle-check" : "fa-circle-xmark"} text-sm flex-shrink-0`,
-                                  }),
+                                  !isEmpty &&
+                                    /*#__PURE__*/ React.createElement(
+                                      "span",
+                                      {
+                                        className:
+                                          "text-3xl font-black flex-shrink-0",
+                                      },
+                                      !noLag && inLager > 0
+                                        ? `${inLager} / `
+                                        : "",
+                                      slot.needed,
+                                    ),
+                                  !isEmpty &&
+                                    !noLag &&
+                                    /*#__PURE__*/ React.createElement("i", {
+                                      className: `fa-solid ${ok ? "fa-circle-check" : isCraftable ? "fa-hammer" : "fa-circle-xmark"} text-3xl flex-shrink-0`,
+                                    }),
+                                ),
                               );
                             });
                           };
