@@ -29,3 +29,14 @@ Wenn eine der obigen Operationen sinnvoll wäre, **vorschlagen und erklären war
 ## Ausnahme: Explizite Anforderung
 
 Wenn der Nutzer **explizit** `git commit & push` (oder gleichbedeutend) fordert, darf ohne Rückfrage committed und gepusht werden – jedoch weiterhin mit kurzer Anzeige der geänderten Dateien und der vorgeschlagenen Commit-Message. Rückfrage nur wenn die Commit-Message unklar ist oder destruktive Optionen (`--force`, `--hard`) nötig wären.
+
+## Nach jedem Push: Deploy-Check
+
+Nach jedem erfolgreichen `git push` **immer** den Deploy-Check asynchron starten:
+
+```powershell
+$sha = git rev-parse HEAD
+Start-Job { param($s) pwsh -NoProfile -File ".github/scripts/check-deploy.ps1" -Sha $s } -ArgumentList $sha
+```
+
+Dann den Job-Output mit `Receive-Job` abrufen sobald die Ergebnisse vorliegen und dem Nutzer melden ob beide Workflows erfolgreich waren.

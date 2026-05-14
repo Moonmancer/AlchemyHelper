@@ -3,7 +3,7 @@
     "UserPromptSubmit": [
       {
         "type": "command",
-        "windows": "powershell -NoProfile -File .github/hooks/inject-instructions.ps1",
+        "windows": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -File .github/hooks/inject-instructions.ps1",
         "command": "pwsh -NoProfile -File .github/hooks/inject-instructions.ps1",
         "cwd": "${workspaceFolder}"
       }

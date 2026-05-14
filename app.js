@@ -698,6 +698,23 @@ function App() {
       return next;
     });
   };
+  const [focusMode, setFocusMode] = useState(() => {
+    try { return localStorage.getItem("alchemyFocusMode") === "1"; } catch { return false; }
+  });
+  const toggleFocusMode = () => {
+    setFocusMode((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("alchemyFocusMode", next ? "1" : "0"); } catch { }
+      return next;
+    });
+  };
+  const [focusRootStep, setFocusRootStep] = useState(() => {
+    try { return parseInt(localStorage.getItem("alchemyFocusRootStep") || "0", 10) || 0; } catch { return 0; }
+  });
+  const setFocusRootStepAndSave = (n) => {
+    setFocusRootStep(n);
+    try { localStorage.setItem("alchemyFocusRootStep", String(n)); } catch { }
+  };
   const saveRecipeIngredientsPersist = (recipeId, materialIds, agentId) => {
     try {
       localStorage.setItem(
@@ -721,6 +738,18 @@ function App() {
       );
       keys.forEach((k) => localStorage.removeItem(k));
     } catch { }
+  };
+  const getInitialSubRecipeMaterials = (recipeId) => {
+    if (rememberIngredients) {
+      const p = loadRecipeIngredientsPersist(recipeId);
+      if (p) return p.materialIds;
+    }
+    const r = [...RECIPES, ...customRecipes].find((rx) => rx.id === recipeId);
+    if (r) {
+      const { combo } = findBestIngredientsWithFallback(r, parsedLager, disabledItems, ignoreEmptyItems);
+      if (combo) return combo.map((m) => m?.id ?? null);
+    }
+    return null;
   };
   const [matSplitMode, setMatSplitMode] = useState(() => {
     try {
@@ -884,6 +913,38 @@ function App() {
     });
     setSessionActiveIdx(toIdx);
   };
+  const removeSubRecipe = (idx) => {
+    const entry = sessionRecipes[idx];
+    if (!entry || !entry.parentId) return;
+    const toRemove = new Set();
+    const collect = (id) => {
+      toRemove.add(id);
+      sessionRecipes.filter((r) => r.parentId === id).forEach((r) => collect(r._id));
+    };
+    collect(entry._id);
+    const activeId = sessionRecipes[sessionActiveIdx]?._id;
+    if (toRemove.has(activeId)) {
+      const parentIdx = sessionRecipes.findIndex((r) => r._id === entry.parentId);
+      const newIdx = Math.max(0, parentIdx);
+      setSessionActiveIdx(newIdx);
+      const parentEntry = sessionRecipes[newIdx];
+      const sm = parentEntry?.savedMaterials;
+      if (sm && sm.some((id) => id != null)) {
+        setSessionCauldron(sm.map((id) => id != null ? MATERIALS.find((m) => m.id === id) || null : null));
+      } else {
+        const parentRecipe = [...RECIPES, ...customRecipes].find((r) => r.id === parentEntry?.recipeId);
+        if (parentRecipe) {
+          const { combo } = findBestIngredientsWithFallback(parentRecipe, parsedLager, disabledItems, ignoreEmptyItems);
+          setSessionCauldron(combo ? combo.map((m) => m) : [null, null, null, null]);
+        } else {
+          setSessionCauldron([null, null, null, null]);
+        }
+      }
+    }
+    const removeIndices = new Set(sessionRecipes.reduce((a, r, i) => { if (toRemove.has(r._id)) a.push(i); return a; }, []));
+    setSessionRecipes((prev) => prev.filter((_, i) => !removeIndices.has(i)));
+    setSessionAgents((prev) => prev.filter((_, i) => !removeIndices.has(i)));
+  };
   const [copiedNaviKey, setCopiedNaviKey] = useState(null);
   const [ocrState, setOcrState] = useState(null); // null | 'loading' | 'noimage' | 'error' | {found: N}
   const [ocrAmbiguous, setOcrAmbiguous] = useState(null); // null | { list: [{text, matches}], idx }
@@ -999,7 +1060,7 @@ function App() {
       // Strategy 1: anything in parentheses starting with a capital letter
       // e.g. "(Energy Ore)" — most reliable for this game UI
       // countable=true: each paren occurrence = one real recipe slot
-      const parenRe = /\(([A-Z][^)\n]{1,45})\)/g;
+      const parenRe = /[([{]\s*([A-Z][^)\]\}\n]{1,45})[)\]\}]/g;
       let m;
       while ((m = parenRe.exec(text)) !== null) addCandidate(m[1], true);
 
@@ -1012,9 +1073,12 @@ function App() {
       }
 
       // Strategy 3: every line that starts with a capital and looks like a name
-      // countable=false: only used for discovery, not counting
+      // countable=false: Strategy 1 already counts bracket-wrapped entries
       text.split("\n").forEach((line) => {
-        const clean = line.replace(/^[^A-Z]+/, "").trim();
+        const clean = line
+          .replace(/^[^A-Z]+/, "")
+          .replace(/[)\]\}\s]+$/, "")
+          .trim();
         if (/^[A-Z][a-zA-Z' ]{3,40}$/.test(clean)) addCandidate(clean, false);
       });
       const dedupedCandidates = [...candidateMap.values()];
@@ -1139,7 +1203,7 @@ function App() {
             "[OCR no-ambiguous toAdd]",
             toAdd.map((x) => x.recipeId),
           );
-          setSessionRecipes((prev) => [...prev, ...toAdd]);
+          setSessionRecipes(toAdd);
         } else {
           const firstAmbiguousIdx = ocrQueue.findIndex(
             (x) => x.type === "ambiguous",
@@ -1194,6 +1258,9 @@ function App() {
   // Ref so the paste handler always calls the latest runOcr (avoids stale closure over sessionRecipes)
   const runOcrRef = React.useRef(runOcr);
   runOcrRef.current = runOcr;
+  // Ref so the auto-trigger can check the current ocrState without stale closure
+  const ocrStateRef = React.useRef(ocrState);
+  ocrStateRef.current = ocrState;
 
   // Auto-trigger OCR on paste in Step 1 unless search input is focused
   useEffect(() => {
@@ -1215,6 +1282,8 @@ function App() {
         }
       }
       if (!blob) return; // no image → don't intercept (allow normal paste)
+      // Skip if scanScreenshot button already registered its own handler
+      if (ocrStateRef.current !== null) return;
       e.preventDefault();
       setSessionRecipes([]);
       setOcrState("loading");
@@ -1516,6 +1585,7 @@ function App() {
       });
     }
     setSessionActiveIdx(0);
+    setFocusRootStepAndSave(0);
     const firstNewEntry = newRecipes[0];
     if (firstNewEntry) {
       setSessionCauldron(
@@ -2393,10 +2463,7 @@ function App() {
         toAdd.map((x) => x.recipeId),
       );
       setOcrAmbiguous(null);
-      setSessionRecipes((prev) => {
-        const existingIds = new Set(prev.map((r) => r.recipeId));
-        return [...prev, ...toAdd.filter((x) => !existingIds.has(x.recipeId))];
-      });
+      setSessionRecipes(toAdd);
     } else {
       setOcrAmbiguous({
         ...ocrAmbiguous,
@@ -4033,6 +4100,26 @@ function App() {
                     t("rememberIngredientsReset"),
                   ),
                 ),
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  { className: "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4" },
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    null,
+                    /*#__PURE__*/ React.createElement("p", { className: "text-sm font-bold text-slate-700 dark:text-slate-200" }, t("focusModeLabel")),
+                    /*#__PURE__*/ React.createElement("p", { className: "text-xs text-slate-500 dark:text-slate-400 mt-0.5" }, t("focusModeHint")),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      onClick: toggleFocusMode,
+                      className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${focusMode ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                    },
+                    /*#__PURE__*/ React.createElement("span", {
+                      className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${focusMode ? "translate-x-5" : "translate-x-0"}`,
+                    }),
+                  ),
+                ),
                   /*#__PURE__*/ React.createElement(
                   "div",
                   {
@@ -4538,11 +4625,12 @@ function App() {
                             .includes(sessionSearch.toLowerCase());
                         return true;
                       });
-                      const selected = sessionRecipes
-                        .map((e) =>
-                          filtered.find((r) => r.id === e.recipeId),
-                        )
-                        .filter(Boolean);
+                      const selectedIds = new Set(
+                        sessionRecipes.map((e) => e.recipeId),
+                      );
+                      const selected = filtered.filter((r) =>
+                        selectedIds.has(r.id),
+                      );
                       const favs = filtered.filter(
                         (r) =>
                           favorites.has(r.id) &&
@@ -4558,6 +4646,9 @@ function App() {
                           const sel = sessionRecipes.some(
                             (e) => e.recipeId === recipe.id,
                           );
+                          const selCount = sessionRecipes.filter(
+                            (e) => e.recipeId === recipe.id,
+                          ).length;
                           const isFav = favorites.has(recipe.id);
                           return /*#__PURE__*/ React.createElement(
                             "button",
@@ -4615,6 +4706,16 @@ function App() {
                               className:
                                 "fa-solid fa-circle-check text-green-500 flex-shrink-0",
                             }),
+                            selCount > 1 &&
+                                  /*#__PURE__*/ React.createElement(
+                              "span",
+                              {
+                                className:
+                                  "text-xs font-bold text-white bg-green-500 rounded-full px-1.5 py-0.5 flex-shrink-0",
+                              },
+                              "\u00d7",
+                              selCount,
+                            ),
                           );
                         },
                       );
@@ -4671,7 +4772,8 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                     "div",
                     {
-                      className: "flex flex-wrap gap-2 items-start",
+                      className: focusMode ? "w-full" : "flex flex-wrap gap-2 items-start",
+                      style: focusMode ? { display: "grid", gridTemplateColumns: "25% 5% 40% 5% 25%", alignItems: "start" } : undefined,
                     },
                     (() => {
                       const childrenOf = {};
@@ -4767,7 +4869,16 @@ function App() {
                           }),
                           recipe?.product,
                           !recipeValid && /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-circle-xmark text-xs" }),
-                          recipeValid && !isActive && /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-circle-check text-green-500 text-xs" }),
+                          recipeValid && /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-circle-check text-green-500 text-xs" }),
+                          !isRoot && /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              onClick: (e) => { e.stopPropagation(); removeSubRecipe(idx); },
+                              title: "Sub-Rezept entfernen",
+                              className: "ml-0.5 opacity-60 hover:opacity-100 hover:text-red-400 transition-opacity leading-none",
+                            },
+                            "\u00d7",
+                          ),
                         );
                       };
                       const renderGroup = (idx, depth) => {
@@ -4777,12 +4888,20 @@ function App() {
                         if (children.length === 0) return btn;
                         return /*#__PURE__*/ React.createElement(
                           "div",
-                          { key: entry._id + "_g", className: "flex flex-col gap-1" },
+                          { key: entry._id + "_g", className: "flex flex-col gap-1 items-start" },
                           btn,
                           /*#__PURE__*/ React.createElement(
                             "div",
-                            { className: "ml-3 pl-2 border-l-2 border-slate-300 dark:border-slate-600 flex flex-col gap-1" },
-                            children.map((ci) => renderGroup(ci, depth + 1)),
+                            { className: "flex flex-col gap-1 items-start" },
+                            children.map((ci) => /*#__PURE__*/ React.createElement(
+                              "div",
+                              { key: sessionRecipes[ci]._id + "_row", className: "flex items-start gap-1" },
+                              /*#__PURE__*/ React.createElement("span", {
+                                className: "text-slate-400 dark:text-slate-500 flex-shrink-0",
+                                style: { marginTop: "5px", lineHeight: "1", fontSize: "16px", width: "24px", textAlign: "right", display: "inline-block" },
+                              }, "\u2937"),
+                              renderGroup(ci, depth + 1),
+                            )),
                           ),
                         );
                       };
@@ -4790,7 +4909,71 @@ function App() {
                         if (!r.parentId || !knownIds.has(r.parentId)) acc.push(i);
                         return acc;
                       }, []);
-                      return roots.map((ri) => renderGroup(ri, 0));
+                      const dfsOrder = [];
+                      const dfsVisit = (idx) => { dfsOrder.push(idx); (childrenOf[sessionRecipes[idx]._id] || []).forEach(dfsVisit); };
+                      roots.forEach(dfsVisit);
+                      const clampedStep = Math.min(focusRootStep, Math.max(0, dfsOrder.length - 1));
+                      const getRoot = (idx) => {
+                        const e = sessionRecipes[idx];
+                        if (!e || !e.parentId || !knownIds.has(e.parentId)) return idx;
+                        const pi = sessionRecipes.findIndex((r) => r._id === e.parentId);
+                        return pi >= 0 ? getRoot(pi) : idx;
+                      };
+                      if (!focusMode) {
+                        return roots.map((ri) => renderGroup(ri, 0));
+                      }
+                      if (dfsOrder.length === 0) return null;
+                      const currentRootIdx = getRoot(dfsOrder[clampedStep]);
+                      const currentRootPosInRoots = roots.indexOf(currentRootIdx);
+                      const prevRootIdx = currentRootPosInRoots > 0 ? roots[currentRootPosInRoots - 1] : null;
+                      const nextRootIdx = currentRootPosInRoots < roots.length - 1 ? roots[currentRootPosInRoots + 1] : null;
+                      const ghostBtn = (ri, isPrev) => {
+                        const e = sessionRecipes[ri];
+                        const r = [...RECIPES, ...customRecipes].find((rec) => rec.id === e.recipeId);
+                        const dfsPosOfRoot = dfsOrder.indexOf(ri);
+                        return /*#__PURE__*/ React.createElement(
+                          "button",
+                          {
+                            key: e._id + "_ghost",
+                            onClick: () => {
+                              if (dfsPosOfRoot >= 0) {
+                                setFocusRootStepAndSave(dfsPosOfRoot);
+                                sessionSelectRecipeSlot(ri);
+                              }
+                            },
+                            className: "flex items-center gap-2 text-sm py-1.5 px-3 rounded-xl border font-bold transition-all opacity-40 hover:opacity-70 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer flex-shrink-0",
+                          },
+                          /*#__PURE__*/ React.createElement(ItemIcon, {
+                            id: r?.matchedRecipeId ?? r?.id,
+                            name: r?.product,
+                            size: "w-5 h-5",
+                          }),
+                          r?.product,
+                        );
+                      };
+                      const makeArrow = () => /*#__PURE__*/ React.createElement("i", {
+                        className: "fa-solid fa-chevron-right text-slate-500 dark:text-slate-400 text-xs",
+                        style: { lineHeight: "1" },
+                      });
+                      return /*#__PURE__*/ React.createElement(
+                        React.Fragment,
+                        null,
+                        /*#__PURE__*/ React.createElement("div", { style: { display: "flex", justifyContent: "center" } },
+                          prevRootIdx !== null && ghostBtn(prevRootIdx, true),
+                        ),
+                        /*#__PURE__*/ React.createElement("div", { style: { height: "34px", display: "flex", alignItems: "center", justifyContent: "center" } },
+                          prevRootIdx !== null && makeArrow(),
+                        ),
+                        /*#__PURE__*/ React.createElement("div", {
+                          style: { display: "flex", justifyContent: "center" },
+                        }, renderGroup(currentRootIdx, 0)),
+                        /*#__PURE__*/ React.createElement("div", { style: { height: "34px", display: "flex", alignItems: "center", justifyContent: "center" } },
+                          nextRootIdx !== null && makeArrow(),
+                        ),
+                        /*#__PURE__*/ React.createElement("div", { style: { display: "flex", justifyContent: "center" } },
+                          nextRootIdx !== null && ghostBtn(nextRootIdx, false),
+                        ),
+                      );
                     })(),
                   ),
                 ),
@@ -5070,7 +5253,7 @@ function App() {
                                       ...prev,
                                       {
                                         recipeId: craftableRecipes[0].id,
-                                        savedMaterials: null,
+                                        savedMaterials: getInitialSubRecipeMaterials(craftableRecipes[0].id),
                                         _id: Math.random().toString(36).slice(2, 10),
                                         parentId: sessionRecipes[sessionActiveIdx]?._id ?? null,
                                       },
@@ -5204,7 +5387,7 @@ function App() {
                                   onClick: (e) => {
                                     e.stopPropagation();
                                     if (_ar.length === 1) {
-                                      setSessionRecipes(prev => [...prev, { recipeId: _ar[0].id, savedMaterials: null, _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
+                                      setSessionRecipes(prev => [...prev, { recipeId: _ar[0].id, savedMaterials: getInitialSubRecipeMaterials(_ar[0].id), _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
                                     } else {
                                       setSessionCraftPicker({ slotIdx: -1, recipes: _ar, parentId: sessionRecipes[sessionActiveIdx]?._id ?? null });
                                     }
@@ -5317,7 +5500,7 @@ function App() {
                                     onClick: (e) => {
                                       e.stopPropagation();
                                       if (_cr.length === 1) {
-                                        setSessionRecipes(prev => [...prev, { recipeId: _cr[0].id, savedMaterials: null, _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
+                                        setSessionRecipes(prev => [...prev, { recipeId: _cr[0].id, savedMaterials: getInitialSubRecipeMaterials(_cr[0].id), _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
                                       } else {
                                         setSessionCraftPicker({ slotIdx: -1, recipes: _cr, parentId: sessionRecipes[sessionActiveIdx]?._id ?? null });
                                       }
@@ -5692,7 +5875,22 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                     "button",
                     {
-                      onClick: () => setSessionStep(1),
+                      onClick: () => {
+                        if (focusMode && focusRootStep > 0) {
+                          const kB = new Set(sessionRecipes.map((r) => r._id));
+                          const coB = {};
+                          sessionRecipes.forEach((r, i) => { if (r.parentId) { if (!coB[r.parentId]) coB[r.parentId] = []; coB[r.parentId].push(i); } });
+                          const rB = sessionRecipes.reduce((a, r, i) => { if (!r.parentId || !kB.has(r.parentId)) a.push(i); return a; }, []);
+                          const dB = [];
+                          const vB = (idx) => { dB.push(idx); (coB[sessionRecipes[idx]._id] || []).forEach(vB); };
+                          rB.forEach(vB);
+                          const prevStep = focusRootStep - 1;
+                          setFocusRootStepAndSave(prevStep);
+                          if (dB[prevStep] !== undefined) sessionSelectRecipeSlot(dB[prevStep]);
+                        } else {
+                          setSessionStep(1);
+                        }
+                      },
                       className:
                         "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
                     },
@@ -5771,21 +5969,58 @@ function App() {
                           totals[elKey] >= recipe.minScore)
                       );
                     });
+                    const focusDfsOrder = (() => {
+                      const kIds = new Set(sessionRecipes.map((r) => r._id));
+                      const co = {};
+                      sessionRecipes.forEach((r, i) => { if (r.parentId) { if (!co[r.parentId]) co[r.parentId] = []; co[r.parentId].push(i); } });
+                      const rts = sessionRecipes.reduce((acc, r, i) => { if (!r.parentId || !kIds.has(r.parentId)) acc.push(i); return acc; }, []);
+                      const ord = [];
+                      const vis = (idx) => { ord.push(idx); (co[sessionRecipes[idx]._id] || []).forEach(vis); };
+                      rts.forEach(vis);
+                      return ord;
+                    })();
+                    const isLastStep = !focusMode || focusRootStep >= focusDfsOrder.length - 1;
+                    const focusEnabled = focusMode && !isLastStep;
+                    const btnEnabled = focusEnabled || allValid;
+                    const onNextClick = () => {
+                      if (focusEnabled) {
+                        const nextStep = focusRootStep + 1;
+                        setFocusRootStepAndSave(nextStep);
+                        sessionSelectRecipeSlot(focusDfsOrder[nextStep]);
+                      } else {
+                        sessionGoToStep3();
+                      }
+                    };
                     return /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: sessionGoToStep3,
-                        disabled: !allValid,
-                        title: !allValid
-                          ? "Nicht alle Rezepte erfï¿½llen die Anforderungen"
-                          : "",
-                        className: `flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors ${allValid ? "bg-green-500 hover:bg-green-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`,
+                        onClick: onNextClick,
+                        disabled: !btnEnabled,
+                        title: !btnEnabled ? "Nicht alle Rezepte erfüllen die Anforderungen" : "",
+                        className: `relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-colors ${btnEnabled ? "" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`,
+                        style: btnEnabled ? { backgroundColor: focusEnabled ? "#4338ca" : "#22c55e" } : undefined,
                       },
-                      t("next"),
-                      " ",
-                          /*#__PURE__*/ React.createElement("i", {
-                        className: "fa-solid fa-arrow-right",
+                      btnEnabled && focusEnabled && /*#__PURE__*/ React.createElement("div", {
+                        className: "absolute inset-0 transition-all duration-300",
+                        style: {
+                          backgroundColor: "#818cf8",
+                          width: `${Math.round(((focusRootStep + 1) / focusDfsOrder.length) * 100)}%`,
+                        },
                       }),
+                      /*#__PURE__*/ React.createElement(
+                        "span",
+                        { className: "relative flex items-center gap-2" },
+                        focusEnabled && /*#__PURE__*/ React.createElement(
+                          "span",
+                          { className: "text-indigo-200 text-xs font-bold tabular-nums" },
+                          `${focusRootStep + 1}/${focusDfsOrder.length}`,
+                        ),
+                        focusEnabled
+                          ? t("focusModeNext")
+                          : t("next"),
+                        " ",
+                        /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-arrow-right" }),
+                      ),
                     );
                   })(),
                 ),
@@ -5825,7 +6060,7 @@ function App() {
                           ...prev,
                           {
                             recipeId: r.id,
-                            savedMaterials: null,
+                            savedMaterials: getInitialSubRecipeMaterials(r.id),
                             _id: Math.random().toString(36).slice(2, 10),
                             parentId: sessionCraftPicker.parentId ?? null,
                           },
