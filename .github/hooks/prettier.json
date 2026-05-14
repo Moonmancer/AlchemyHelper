@@ -3,9 +3,8 @@
     "PostToolUse": [
       {
         "type": "command",
-        "windows": "cmd /c node node_modules\\prettier\\bin\\prettier.cjs --write app.js db.js 2>nul & exit 0",
-        "command": "node node_modules/prettier/bin/prettier.cjs --write app.js db.js 2>/dev/null; exit 0",
-        "cwd": "${workspaceFolder}"
+        "windows": "node node_modules\\prettier\\bin\\prettier.cjs --write app.js db.js 2>$null; exit 0",
+        "command": "node node_modules/prettier/bin/prettier.cjs --write app.js db.js 2>/dev/null; exit 0"
       }
     ]
   }
