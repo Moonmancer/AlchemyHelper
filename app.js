@@ -1465,6 +1465,15 @@ function App() {
     sessionAgents.forEach((agent) => {
       if (agent) matNeeded[agent.id] = (matNeeded[agent.id] || 0) + 1;
     });
+    sessionRecipes.forEach(({ recipeId }) => {
+      const recipe = [...RECIPES, ...customRecipes].find(
+        (r) => r.id === recipeId,
+      );
+      if (!recipe) return;
+      const catObj = CATALYSTS.find((c) => c.name === recipe.catalyst);
+      if (catObj && catObj.id !== "none")
+        matNeeded[catObj.id] = (matNeeded[catObj.id] || 0) + 1;
+    });
     return matNeeded;
   }, [
     sessionRecipes,
@@ -1503,6 +1512,9 @@ function App() {
       const recipeAgent = sessionAgents[recipeIdx] ?? null;
       if (recipeAgent)
         matNeeded[recipeAgent.id] = (matNeeded[recipeAgent.id] || 0) + 1;
+      const catObj = CATALYSTS.find((c) => c.name === recipe.catalyst);
+      if (catObj && catObj.id !== "none")
+        matNeeded[catObj.id] = (matNeeded[catObj.id] || 0) + 1;
       return matNeeded;
     });
   }, [
@@ -5391,10 +5403,11 @@ function App() {
                                                 : slot.air === _ms
                                                   ? "air"
                                                   : "water"
-                                            : null,
+                                            : (recipe?.element?.toLowerCase() ??
+                                                null),
                                         );
                                       },
-                                      className: `w-full relative rounded-xl border-2 p-2.5 flex flex-col gap-1.5 text-left transition-all hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1 group ${slotBg}`,
+                                      className: `w-full h-full relative rounded-xl border-2 p-2.5 flex flex-col gap-1.5 text-left transition-all hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1 group ${slotBg}`,
                                     },
                                     /*#__PURE__*/ React.createElement(
                                       "div",
@@ -5434,8 +5447,11 @@ function App() {
                                     ),
                                     slot
                                       ? /*#__PURE__*/ React.createElement(
-                                          React.Fragment,
-                                          null,
+                                          "div",
+                                          {
+                                            className:
+                                              "flex-1 flex flex-col gap-1.5",
+                                          },
                                           /*#__PURE__*/ React.createElement(
                                             "div",
                                             {
@@ -5532,7 +5548,7 @@ function App() {
                                           "div",
                                           {
                                             className:
-                                              "flex flex-col items-center gap-1 py-2 text-slate-400",
+                                              "flex-1 flex flex-col items-center justify-center gap-1 py-2 text-slate-400",
                                           },
                                           /*#__PURE__*/ React.createElement(
                                             "i",
