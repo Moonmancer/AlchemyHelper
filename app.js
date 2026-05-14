@@ -715,6 +715,33 @@ function App() {
     setFocusRootStep(n);
     try { localStorage.setItem("alchemyFocusRootStep", String(n)); } catch { }
   };
+  const [holdState, setHoldState] = React.useState(null); // { id: string, progress: number } | null
+  const holdTimerRef = React.useRef(null);
+  const startHold = React.useCallback((id, onComplete) => {
+    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+    setHoldState({ id, progress: 0 });
+    let elapsed = 0;
+    const DURATION = 1500;
+    const TICK = 16;
+    holdTimerRef.current = setInterval(() => {
+      elapsed += TICK;
+      const progress = Math.min(100, (elapsed / DURATION) * 100);
+      setHoldState({ id, progress });
+      if (elapsed >= DURATION) {
+        clearInterval(holdTimerRef.current);
+        holdTimerRef.current = null;
+        setHoldState(null);
+        onComplete();
+      }
+    }, TICK);
+  }, []);
+  const cancelHold = React.useCallback(() => {
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setHoldState(null);
+  }, []);
   const saveRecipeIngredientsPersist = (recipeId, materialIds, agentId) => {
     try {
       localStorage.setItem(
@@ -5891,14 +5918,23 @@ function App() {
                           setSessionStep(1);
                         }
                       },
+                      onMouseDown: focusMode && focusRootStep > 0 ? (e) => { e.preventDefault(); startHold("s2-back", () => setSessionStep(1)); } : undefined,
+                      onMouseUp: focusMode && focusRootStep > 0 ? cancelHold : undefined,
+                      onMouseLeave: focusMode && focusRootStep > 0 ? cancelHold : undefined,
+                      onTouchStart: focusMode && focusRootStep > 0 ? (e) => { e.preventDefault(); startHold("s2-back", () => setSessionStep(1)); } : undefined,
+                      onTouchEnd: focusMode && focusRootStep > 0 ? cancelHold : undefined,
                       className:
-                        "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
+                        "relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
                     },
+                    holdState?.id === "s2-back" && /*#__PURE__*/ React.createElement("div", {
+                      className: "absolute inset-0 rounded-xl pointer-events-none",
+                      style: { backgroundColor: "rgba(99,102,241,0.25)", width: `${holdState.progress}%` },
+                    }),
                         /*#__PURE__*/ React.createElement("i", {
-                      className: "fa-solid fa-arrow-left",
+                      className: "fa-solid fa-arrow-left relative",
                     }),
                     " ",
-                    t("back"),
+                    /*#__PURE__*/ React.createElement("span", { className: "relative" }, t("back")),
                   ),
                   (() => {
                     const allValid = sessionRecipes.every((entry, i) => {
@@ -5997,6 +6033,11 @@ function App() {
                         onClick: onNextClick,
                         disabled: !btnEnabled,
                         title: !btnEnabled ? "Nicht alle Rezepte erfüllen die Anforderungen" : "",
+                        onMouseDown: btnEnabled && focusEnabled ? (e) => { e.preventDefault(); startHold("s2-next", () => sessionGoToStep3()); } : undefined,
+                        onMouseUp: btnEnabled && focusEnabled ? cancelHold : undefined,
+                        onMouseLeave: btnEnabled && focusEnabled ? cancelHold : undefined,
+                        onTouchStart: btnEnabled && focusEnabled ? (e) => { e.preventDefault(); startHold("s2-next", () => sessionGoToStep3()); } : undefined,
+                        onTouchEnd: btnEnabled && focusEnabled ? cancelHold : undefined,
                         className: `relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-colors ${btnEnabled ? "" : "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"}`,
                         style: btnEnabled ? { backgroundColor: focusEnabled ? "#4338ca" : "#22c55e" } : undefined,
                       },
@@ -6006,6 +6047,10 @@ function App() {
                           backgroundColor: "#818cf8",
                           width: `${Math.round(((focusRootStep + 1) / focusDfsOrder.length) * 100)}%`,
                         },
+                      }),
+                      holdState?.id === "s2-next" && /*#__PURE__*/ React.createElement("div", {
+                        className: "absolute inset-0 rounded-xl pointer-events-none",
+                        style: { backgroundColor: "rgba(255,255,255,0.35)", width: `${holdState.progress}%` },
                       }),
                       /*#__PURE__*/ React.createElement(
                         "span",
@@ -6248,6 +6293,117 @@ function App() {
                             ),
                           );
                         };
+                        // Crafting items: products of sub-recipes (have parentId)
+                        const craftingProductIds = new Set();
+                        sessionRecipes.forEach((entry) => {
+                          if (!entry.parentId) return;
+                          const r = [...RECIPES, ...customRecipes].find((rx) => rx.id === entry.recipeId);
+                          if (!r?.product) return;
+                          const found =
+                            MATERIALS.find((m) => m.name === r.product) ||
+                            AGENTS.find((a) => a.name === r.product) ||
+                            CATALYSTS.find((c) => c.id !== "none" && c.name === r.product);
+                          if (found) craftingProductIds.add(found.id);
+                        });
+                        const craftingEntries = allEntries.filter(([idStr]) => craftingProductIds.has(parseInt(idStr)));
+                        const nonCraftingEntries = allEntries.filter(([idStr]) => !craftingProductIds.has(parseInt(idStr)));
+                        const renderCraftingEntry = ([idStr, needed]) => {
+                          const id = parseInt(idStr);
+                          const mat = findItem(id);
+                          const inLager = parsedLager[id] || 0;
+                          const enoughInLager = inLager >= needed;
+                          return /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              key: id,
+                              className: `flex items-center gap-2 px-3 py-2 rounded-xl border ${noLager2 ? "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700" : enoughInLager ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`,
+                            },
+                            /*#__PURE__*/ React.createElement(ItemIcon, {
+                              id: id,
+                              name: mat?.name || idStr,
+                              size: "w-6 h-6 flex-shrink-0",
+                            }),
+                            /*#__PURE__*/ React.createElement(
+                              "span",
+                              {
+                                className:
+                                  "flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 truncate",
+                              },
+                              mat?.name || `ID ${id}`,
+                            ),
+                            /*#__PURE__*/ React.createElement(
+                              "span",
+                              {
+                                className: `text-xs font-black flex-shrink-0 ${noLager2 ? "text-slate-500 dark:text-slate-400" : enoughInLager ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`,
+                              },
+                              !noLager2 && inLager > 0
+                                ? `${inLager} / `
+                                : "",
+                              needed,
+                            ),
+                            !noLager2 &&
+                              /*#__PURE__*/ React.createElement("i", {
+                              className: `fa-solid ${enoughInLager ? "fa-circle-check text-green-500" : "fa-hammer text-amber-500"} text-sm flex-shrink-0`,
+                            }),
+                            /*#__PURE__*/ React.createElement(
+                              "a",
+                              {
+                                href: `https://cp.arcadia-online.org/item/view/?id=${id}`,
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                                onClick: (e) => e.stopPropagation(),
+                                className:
+                                  "flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors text-xs",
+                                title: "Arcadia DB",
+                              },
+                              /*#__PURE__*/ React.createElement("i", {
+                                className: "fa-solid fa-database",
+                              }),
+                            ),
+                            /*#__PURE__*/ React.createElement(
+                              "a",
+                              {
+                                href: `https://arcadia-market.de/sells/item_id/${id}`,
+                                target: "_blank",
+                                rel: "noopener noreferrer",
+                                onClick: (e) => e.stopPropagation(),
+                                className:
+                                  "flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors text-xs",
+                                title: "Arcadia Market",
+                              },
+                              /*#__PURE__*/ React.createElement("i", {
+                                className: "fa-solid fa-cart-shopping",
+                              }),
+                            ),
+                          );
+                        };
+                        const craftingSection = craftingEntries.length > 0 &&
+                          /*#__PURE__*/ React.createElement(
+                          "div",
+                          null,
+                            /*#__PURE__*/ React.createElement(
+                            "p",
+                            {
+                              className:
+                                "text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1.5 flex items-center gap-1",
+                            },
+                              /*#__PURE__*/ React.createElement("i", {
+                              className: "fa-solid fa-hammer",
+                            }),
+                            " ",
+                            t("stockCrafting"),
+                            " (",
+                            craftingEntries.length,
+                            ")",
+                          ),
+                            /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              className: "space-y-1.5",
+                            },
+                            craftingEntries.map(renderCraftingEntry),
+                          ),
+                        );
                         if (
                           matSplitMode === "none" ||
                           (matSplitMode === "stock" && noLager2)
@@ -6255,18 +6411,26 @@ function App() {
                           return /*#__PURE__*/ React.createElement(
                             "div",
                             {
-                              className: "space-y-1.5",
+                              className: "space-y-3",
                             },
-                            allEntries.map(renderEntry),
+                            craftingSection,
+                            nonCraftingEntries.length > 0 &&
+                              /*#__PURE__*/ React.createElement(
+                              "div",
+                              {
+                                className: "space-y-1.5",
+                              },
+                              nonCraftingEntries.map(renderEntry),
+                            ),
                           );
                         }
                         if (matSplitMode === "stock") {
-                          const available = allEntries.filter(
+                          const available = nonCraftingEntries.filter(
                             ([idStr, needed]) =>
                               (parsedLager[parseInt(idStr)] || 0) >=
                               needed,
                           );
-                          const missing = allEntries.filter(
+                          const missing = nonCraftingEntries.filter(
                             ([idStr, needed]) =>
                               (parsedLager[parseInt(idStr)] || 0) <
                               needed,
@@ -6276,6 +6440,7 @@ function App() {
                             {
                               className: "space-y-3",
                             },
+                            craftingSection,
                             missing.length > 0 &&
                                     /*#__PURE__*/ React.createElement(
                               "div",
@@ -6333,11 +6498,11 @@ function App() {
                           );
                         }
                         // mode === 'type'
-                        const usable = allEntries.filter(
+                        const usable = nonCraftingEntries.filter(
                           ([idStr]) =>
                             getStorageType(parseInt(idStr)) === "usable",
                         );
-                        const etc = allEntries.filter(
+                        const etc = nonCraftingEntries.filter(
                           ([idStr]) =>
                             getStorageType(parseInt(idStr)) === "etc",
                         );
@@ -6346,6 +6511,7 @@ function App() {
                           {
                             className: "space-y-3",
                           },
+                          craftingSection,
                           usable.length > 0 &&
                                   /*#__PURE__*/ React.createElement(
                             "div",
@@ -6717,14 +6883,23 @@ function App() {
                               safeIdx > 0
                                 ? setSessionStep4RecipeIdxPersist(safeIdx - 1)
                                 : setSessionStep(3),
+                            onMouseDown: safeIdx > 0 ? (e) => { e.preventDefault(); startHold("s4-back", () => setSessionStep(3)); } : undefined,
+                            onMouseUp: safeIdx > 0 ? cancelHold : undefined,
+                            onMouseLeave: safeIdx > 0 ? cancelHold : undefined,
+                            onTouchStart: safeIdx > 0 ? (e) => { e.preventDefault(); startHold("s4-back", () => setSessionStep(3)); } : undefined,
+                            onTouchEnd: safeIdx > 0 ? cancelHold : undefined,
                             className:
-                              "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
+                              "relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
                           },
+                          holdState?.id === "s4-back" && /*#__PURE__*/ React.createElement("div", {
+                            className: "absolute inset-0 rounded-xl pointer-events-none",
+                            style: { backgroundColor: "rgba(99,102,241,0.25)", width: `${holdState.progress}%` },
+                          }),
                           /*#__PURE__*/ React.createElement("i", {
-                            className: "fa-solid fa-arrow-left",
+                            className: "fa-solid fa-arrow-left relative",
                           }),
                           " ",
-                          t("back"),
+                          /*#__PURE__*/ React.createElement("span", { className: "relative" }, t("back")),
                         ),
                         /*#__PURE__*/ React.createElement(
                           "button",
@@ -6733,6 +6908,11 @@ function App() {
                               safeIdx < total - 1
                                 ? setSessionStep4RecipeIdxPersist(safeIdx + 1)
                                 : sessionGoToStep5(),
+                            onMouseDown: safeIdx < total - 1 ? (e) => { e.preventDefault(); startHold("s4-next", () => sessionGoToStep5()); } : undefined,
+                            onMouseUp: safeIdx < total - 1 ? cancelHold : undefined,
+                            onMouseLeave: safeIdx < total - 1 ? cancelHold : undefined,
+                            onTouchStart: safeIdx < total - 1 ? (e) => { e.preventDefault(); startHold("s4-next", () => sessionGoToStep5()); } : undefined,
+                            onTouchEnd: safeIdx < total - 1 ? cancelHold : undefined,
                             className:
                               "relative overflow-hidden flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-colors",
                             style: { backgroundColor: "#4338ca" },
@@ -6743,6 +6923,10 @@ function App() {
                               backgroundColor: "#818cf8",
                               width: `${Math.round(((safeIdx + 1) / total) * 100)}%`,
                             },
+                          }),
+                          holdState?.id === "s4-next" && /*#__PURE__*/ React.createElement("div", {
+                            className: "absolute inset-0 rounded-xl pointer-events-none",
+                            style: { backgroundColor: "rgba(255,255,255,0.35)", width: `${holdState.progress}%` },
                           }),
                           /*#__PURE__*/ React.createElement(
                             "span",
