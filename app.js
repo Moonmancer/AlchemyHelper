@@ -5353,9 +5353,7 @@ function App() {
                                     )
                                   : [];
                                 const showCraftPlus =
-                                  slot &&
-                                  lagerAmt === 0 &&
-                                  craftableRecipes.length > 0;
+                                  slot && craftableRecipes.length > 0;
                                 return /*#__PURE__*/ React.createElement(
                                   "div",
                                   { key: slotIdx, className: "relative" },
