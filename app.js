@@ -4727,7 +4727,19 @@ function App() {
                         const effectiveRankS2 = recipe?.rank === "Custom" ? recipe.customRank : recipe.rank;
                         const potionIdS2 = { Basic: 645, Intermediate: 656, Advanced: 657 }[effectiveRankS2];
                         if (potionIdS2) slotsNeeded[potionIdS2] = (slotsNeeded[potionIdS2] || 0) + 2;
-                        const lagerOk = !hasLager || Object.entries(slotsNeeded).every(([id, needed]) => (parsedLager[parseInt(id)] || 0) >= needed);
+                        const catObjS2 = recipe?.catalyst && recipe.catalyst !== "none" ? CATALYSTS.find((c) => c.name === recipe.catalyst) : null;
+                        if (catObjS2?.id) slotsNeeded[catObjS2.id] = (slotsNeeded[catObjS2.id] || 0) + 1;
+                        if (tabAgent?.id) slotsNeeded[tabAgent.id] = (slotsNeeded[tabAgent.id] || 0) + 1;
+                        const subCraftProducts = {};
+                        (childrenOf[entry._id] || []).forEach((childIdx) => {
+                          const childEntry = sessionRecipes[childIdx];
+                          const childRecipe = [...RECIPES, ...customRecipes].find((r) => r.id === childEntry.recipeId);
+                          if (childRecipe?.product) {
+                            const mat = MATERIALS.find((m) => m.name === childRecipe.product);
+                            if (mat) subCraftProducts[mat.id] = (subCraftProducts[mat.id] || 0) + 1;
+                          }
+                        });
+                        const lagerOk = !hasLager || Object.entries(slotsNeeded).every(([id, needed]) => (parsedLager[parseInt(id)] || 0) + (subCraftProducts[parseInt(id)] || 0) >= needed);
                         const recipeValid = recipe && count === 4 && dom === recipe.element && quality >= recipe.minQuality && (!(recipe.minScore > 0) || totals[elKey] >= recipe.minScore) && lagerOk;
                         const isActive = idx === sessionActiveIdx;
                         const isRoot = !entry.parentId || !knownIds.has(entry.parentId);
@@ -5137,77 +5149,77 @@ function App() {
                             {
                               className: "mb-3 mt-3",
                             },
-                                  (() => {
-                                    const _ar = sessionAgent ? [...RECIPES, ...customRecipes].filter(r => r.product === sessionAgent.name) : [];
-                                    return /*#__PURE__*/ React.createElement(React.Fragment, null,
+                            (() => {
+                              const _ar = sessionAgent ? [...RECIPES, ...customRecipes].filter(r => r.product === sessionAgent.name) : [];
+                              return /*#__PURE__*/ React.createElement(React.Fragment, null,
                                       /*#__PURE__*/ React.createElement("div", { className: "relative" },
                                         /*#__PURE__*/ React.createElement(
-                                          "button",
-                                          {
-                                            onClick: () => setSessionAgentModalOpen(true),
-                                            className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all hover:shadow-md
+                                "button",
+                                {
+                                  onClick: () => setSessionAgentModalOpen(true),
+                                  className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all hover:shadow-md
                                                                                             ${sessionAgent ? "border-indigo-200 dark:border-indigo-700/50 bg-indigo-50 dark:bg-indigo-900/30 hover:border-indigo-400" : "border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 hover:border-indigo-300"}`,
-                                          },
-                                          sessionAgent
-                                            ? /*#__PURE__*/ React.createElement(
-                                              React.Fragment,
-                                              null,
+                                },
+                                sessionAgent
+                                  ? /*#__PURE__*/ React.createElement(
+                                    React.Fragment,
+                                    null,
                                               /*#__PURE__*/ React.createElement(ItemIcon, { id: sessionAgent.id, name: sessionAgent.name, size: "w-8 h-8 flex-shrink-0" }),
                                               /*#__PURE__*/ React.createElement(
-                                                "div",
-                                                { className: "flex-1 min-w-0 text-left" },
+                                      "div",
+                                      { className: "flex-1 min-w-0 text-left" },
                                                 /*#__PURE__*/ React.createElement("p", { className: "text-sm font-bold text-slate-800 dark:text-slate-200 truncate" }, sessionAgent.name),
                                                 /*#__PURE__*/ React.createElement(
-                                                  "div",
-                                                  { className: "flex gap-1 mt-0.5 flex-wrap" },
-                                                  [["fa-fire","text-red-500",sessionAgent.fire],["fa-droplet","text-blue-500",sessionAgent.water],["fa-wind","text-yellow-500",sessionAgent.air],["fa-mountain","text-green-600",sessionAgent.earth]].map(([icon, color, val]) =>
-                                                    val > 0 && /*#__PURE__*/ React.createElement("div", { key: icon, className: `flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold ${color}` },
+                                        "div",
+                                        { className: "flex gap-1 mt-0.5 flex-wrap" },
+                                        [["fa-fire", "text-red-500", sessionAgent.fire], ["fa-droplet", "text-blue-500", sessionAgent.water], ["fa-wind", "text-yellow-500", sessionAgent.air], ["fa-mountain", "text-green-600", sessionAgent.earth]].map(([icon, color, val]) =>
+                                          val > 0 && /*#__PURE__*/ React.createElement("div", { key: icon, className: `flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold ${color}` },
                                                       /*#__PURE__*/ React.createElement("i", { className: `fa-solid ${icon} text-[9px]` }), val,
-                                                    ),
-                                                  ),
-                                                  sessionAgent.quality > 0 && /*#__PURE__*/ React.createElement("div", { className: "flex items-center gap-0.5 py-0.5 px-1 rounded border bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-[10px] font-bold text-indigo-500 dark:text-indigo-400" },
+                                          ),
+                                        ),
+                                        sessionAgent.quality > 0 && /*#__PURE__*/ React.createElement("div", { className: "flex items-center gap-0.5 py-0.5 px-1 rounded border bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-[10px] font-bold text-indigo-500 dark:text-indigo-400" },
                                                     /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-wand-magic-sparkles text-[9px]" }), sessionAgent.quality,
-                                                  ),
-                                                  Object.keys(parsedLager).length > 0 && /*#__PURE__*/ React.createElement("div", { className: "flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold text-slate-500 dark:text-slate-400" },
+                                        ),
+                                        Object.keys(parsedLager).length > 0 && /*#__PURE__*/ React.createElement("div", { className: "flex items-center gap-0.5 py-0.5 px-1 rounded bg-white/70 dark:bg-slate-700/60 text-[10px] font-bold text-slate-500 dark:text-slate-400" },
                                                     /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-box text-[9px]" }), parsedLager[sessionAgent.id] ?? 0,
-                                                  ),
-                                                ),
-                                              ),
+                                        ),
+                                      ),
+                                    ),
                                               /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-rotate text-indigo-400 flex-shrink-0" }),
-                                            )
-                                            : /*#__PURE__*/ React.createElement(
-                                              React.Fragment,
-                                              null,
+                                  )
+                                  : /*#__PURE__*/ React.createElement(
+                                    React.Fragment,
+                                    null,
                                               /*#__PURE__*/ React.createElement("div", { className: "w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0" },
                                                 /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-plus text-slate-400 text-sm" }),
-                                              ),
+                                    ),
                                               /*#__PURE__*/ React.createElement("span", { className: "text-sm text-slate-400 font-semibold" }, t("noAgentSelected")),
-                                            ),
-                                        ),
-                                        _ar.length > 0 && /*#__PURE__*/ React.createElement("button", {
-                                          type: "button",
-                                          onClick: (e) => {
-                                            e.stopPropagation();
-                                            if (_ar.length === 1) {
-                                              setSessionRecipes(prev => [...prev, { recipeId: _ar[0].id, savedMaterials: null, _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
-                                            } else {
-                                              setSessionCraftPicker({ slotIdx: -1, recipes: _ar, parentId: sessionRecipes[sessionActiveIdx]?._id ?? null });
-                                            }
-                                          },
-                                          className: "absolute bottom-1 right-1 z-10 w-5 h-5 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md",
-                                          title: "Als Extra-Craft hinzufügen",
-                                        }, /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-plus text-[9px]" })),
-                                      ),
-                                      sessionAgent && /*#__PURE__*/ React.createElement("button", {
-                                        onClick: () => setSessionAgent(null),
-                                        className: "mt-1 text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1",
-                                      },
+                                  ),
+                              ),
+                                _ar.length > 0 && /*#__PURE__*/ React.createElement("button", {
+                                  type: "button",
+                                  onClick: (e) => {
+                                    e.stopPropagation();
+                                    if (_ar.length === 1) {
+                                      setSessionRecipes(prev => [...prev, { recipeId: _ar[0].id, savedMaterials: null, _id: Math.random().toString(36).slice(2, 10), parentId: sessionRecipes[sessionActiveIdx]?._id ?? null }]);
+                                    } else {
+                                      setSessionCraftPicker({ slotIdx: -1, recipes: _ar, parentId: sessionRecipes[sessionActiveIdx]?._id ?? null });
+                                    }
+                                  },
+                                  className: "absolute bottom-1 right-1 z-10 w-5 h-5 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md",
+                                  title: "Als Extra-Craft hinzufügen",
+                                }, /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-plus text-[9px]" })),
+                              ),
+                                sessionAgent && /*#__PURE__*/ React.createElement("button", {
+                                  onClick: () => setSessionAgent(null),
+                                  className: "mt-1 text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1",
+                                },
                                         /*#__PURE__*/ React.createElement("i", { className: "fa-solid fa-xmark text-[10px]" }),
-                                        " ",
-                                        t("agentRemove"),
-                                      ),
-                                    );
-                                  })(),
+                                  " ",
+                                  t("agentRemove"),
+                                ),
+                              );
+                            })(),
                           ),
                                 /*#__PURE__*/ React.createElement(
                             "div",

@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -File .github/hooks/inject-instructions.ps1",
+        "command": "pwsh -NoProfile -File .github/hooks/inject-instructions.ps1",
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+  }
+}
