@@ -25,3 +25,7 @@ Folgende Git-Operationen dürfen **niemals selbstständig** ausgeführt werden �
 ## Verhalten bei Rückfragen
 
 Wenn eine der obigen Operationen sinnvoll wäre, **vorschlagen und erklären warum**, dann fragen – mit der Möglichkeit für den Nutzer, den genauen Befehl selbst anzupassen (`allowFreeformInput: true`).
+
+## Ausnahme: Explizite Anforderung
+
+Wenn der Nutzer **explizit** `git commit & push` (oder gleichbedeutend) fordert, darf ohne Rückfrage committed und gepusht werden – jedoch weiterhin mit kurzer Anzeige der geänderten Dateien und der vorgeschlagenen Commit-Message. Rückfrage nur wenn die Commit-Message unklar ist oder destruktive Optionen (`--force`, `--hard`) nötig wären.

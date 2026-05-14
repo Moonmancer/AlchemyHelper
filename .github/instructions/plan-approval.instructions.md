@@ -6,6 +6,12 @@ applyTo: "**"
 
 Bei komplexen oder mehrstufigen Aufgaben (mehr als ~2 Dateien oder ~3 Schritte):
 
+**Auch Pflicht bei:**
+- Mehr als 2 Codeänderungen, egal ob in einer oder mehreren Dateien
+- Jeder Änderung, bei der Design-Entscheidungen getroffen werden (Platzierung, Stil, Verhalten)
+- Jeder Änderung an bestehender Logik (nicht nur Additionen)
+- Größeren Umstrukturierungen innerhalb einer Datei (z.B. Wrapping, Refactoring)
+
 1. **Plan erstellen** – Liste alle geplanten Änderungen auf:
    - Welche Dateien werden geändert
    - Was genau wird geändert (kurz, präzise)
