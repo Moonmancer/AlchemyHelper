@@ -1142,9 +1142,11 @@ function App() {
       text.split("\n").forEach((line) => {
         const clean = line
           .replace(/^[^A-Z]+/, "")
+          .replace(/\s*[xX×]\s*\d+\s*$/, "") // strip quantity suffix e.g. "x1", "×3"
           .replace(/[)\]\}\s]+$/, "")
           .trim();
-        if (/^[A-Z][a-zA-Z' ]{3,40}$/.test(clean)) addCandidate(clean, false);
+        if (/^[A-Z][a-zA-Z' 0-9]{3,40}$/.test(clean))
+          addCandidate(clean, false);
       });
       const dedupedCandidates = [...candidateMap.values()];
       console.log(
@@ -1465,15 +1467,6 @@ function App() {
     sessionAgents.forEach((agent) => {
       if (agent) matNeeded[agent.id] = (matNeeded[agent.id] || 0) + 1;
     });
-    sessionRecipes.forEach(({ recipeId }) => {
-      const recipe = [...RECIPES, ...customRecipes].find(
-        (r) => r.id === recipeId,
-      );
-      if (!recipe) return;
-      const catObj = CATALYSTS.find((c) => c.name === recipe.catalyst);
-      if (catObj && catObj.id !== "none")
-        matNeeded[catObj.id] = (matNeeded[catObj.id] || 0) + 1;
-    });
     return matNeeded;
   }, [
     sessionRecipes,
@@ -1512,9 +1505,6 @@ function App() {
       const recipeAgent = sessionAgents[recipeIdx] ?? null;
       if (recipeAgent)
         matNeeded[recipeAgent.id] = (matNeeded[recipeAgent.id] || 0) + 1;
-      const catObj = CATALYSTS.find((c) => c.name === recipe.catalyst);
-      if (catObj && catObj.id !== "none")
-        matNeeded[catObj.id] = (matNeeded[catObj.id] || 0) + 1;
       return matNeeded;
     });
   }, [
