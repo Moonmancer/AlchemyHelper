@@ -4728,15 +4728,18 @@ function App() {
                         const potionIdS2 = { Basic: 645, Intermediate: 656, Advanced: 657 }[effectiveRankS2];
                         if (potionIdS2) slotsNeeded[potionIdS2] = (slotsNeeded[potionIdS2] || 0) + 2;
                         const catObjS2 = recipe?.catalyst && recipe.catalyst !== "none" ? CATALYSTS.find((c) => c.name === recipe.catalyst) : null;
-                        if (catObjS2?.id) slotsNeeded[catObjS2.id] = (slotsNeeded[catObjS2.id] || 0) + 1;
+                        if (catObjS2?.id && catObjS2.id !== "none") slotsNeeded[catObjS2.id] = (slotsNeeded[catObjS2.id] || 0) + 1;
                         if (tabAgent?.id) slotsNeeded[tabAgent.id] = (slotsNeeded[tabAgent.id] || 0) + 1;
                         const subCraftProducts = {};
                         (childrenOf[entry._id] || []).forEach((childIdx) => {
                           const childEntry = sessionRecipes[childIdx];
                           const childRecipe = [...RECIPES, ...customRecipes].find((r) => r.id === childEntry.recipeId);
                           if (childRecipe?.product) {
-                            const mat = MATERIALS.find((m) => m.name === childRecipe.product);
-                            if (mat) subCraftProducts[mat.id] = (subCraftProducts[mat.id] || 0) + 1;
+                            const found =
+                              MATERIALS.find((m) => m.name === childRecipe.product) ||
+                              AGENTS.find((a) => a.name === childRecipe.product) ||
+                              CATALYSTS.find((c) => c.id !== "none" && c.name === childRecipe.product);
+                            if (found) subCraftProducts[found.id] = (subCraftProducts[found.id] || 0) + 1;
                           }
                         });
                         const lagerOk = !hasLager || Object.entries(slotsNeeded).every(([id, needed]) => (parsedLager[parseInt(id)] || 0) + (subCraftProducts[parseInt(id)] || 0) >= needed);
