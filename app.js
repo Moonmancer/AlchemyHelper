@@ -1199,9 +1199,16 @@ function App() {
       let m;
       while ((m = parenRe.exec(text)) !== null) addCandidate(m[1], true);
 
+      // Strategy 1b: unclosed paren at end of line (e.g. OCR drops closing bracket)
+      // countable=true: same logic as Strategy 1
+      const openParenRe = /[([{]\s*([A-Z][^\n)\]\}]{1,45})\s*$/gm;
+      while ((m = openParenRe.exec(text)) !== null)
+        addCandidate(m[1].trim(), true);
+
       // Strategy 2: R1: / R1) / Ri: with optional paren around name
+      // S/s added as common OCR confusion for digit 5 (e.g. "RS:" instead of "R5:")
       // countable=false: only used for discovery, not counting
-      const rRe = /[Rr][lLiI1\d][^A-Za-z\n]{0,4}([A-Z][^\n(]{1,45})/g;
+      const rRe = /[Rr][lLiI1\dSs][^A-Za-z\n]{0,4}([A-Z][^\n(]{1,45})/g;
       while ((m = rRe.exec(text)) !== null) {
         const c = m[1].replace(/[()[\]{}'"`]/g, "").trim();
         if (c.length > 2) addCandidate(c, false);
@@ -1218,12 +1225,35 @@ function App() {
         if (/^[A-Z][a-zA-Z' 0-9]{3,40}$/.test(clean))
           addCandidate(clean, false);
       });
+
+      // Strategy 4: reverse lookup — for each recipe name check if its flat form
+      // appears in any OCR line (case-insensitive). Catches OCR output in all-lowercase
+      // (e.g. "(shade Ore)" where OCR lowercased the first letter).
+      // countable=false: not a reliable count source
+      const allRecipes = [...RECIPES, ...customRecipes];
+      const ocrLinesFlat = text.split("\n").map((l) => flat(l));
+      allRecipes.forEach((r) => {
+        if (!r.product || r.product.length < 4) return;
+        const rF = flat(r.product);
+        if (ocrLinesFlat.some((lf) => lf.includes(rF)))
+          addCandidate(r.product, false);
+      });
+
       const dedupedCandidates = [...candidateMap.values()];
+      // Sort by position in OCR text so the order matches the screenshot (R1-->R5)
+      const ocrTextFlat = flat(text);
+      dedupedCandidates.sort((a, b) => {
+        const posA = ocrTextFlat.indexOf(flat(a.bestText));
+        const posB = ocrTextFlat.indexOf(flat(b.bestText));
+        if (posA === -1 && posB === -1) return 0;
+        if (posA === -1) return 1;
+        if (posB === -1) return -1;
+        return posA - posB;
+      });
       console.log(
         "[OCR candidates]",
         dedupedCandidates.map((c) => `${c.bestText}×${c.count}`),
       );
-      const allRecipes = [...RECIPES, ...customRecipes];
       console.log(
         "[OCR allRecipes count]",
         allRecipes.length,
