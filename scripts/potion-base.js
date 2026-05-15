@@ -14,4 +14,9 @@
     name: "Berserk Potion",
     type: "PotionBase"
   },
+  {
+    id: 610,
+    name: "Yggdrasil Leaf",
+    type: "PotionBase"
+  }
 ];
