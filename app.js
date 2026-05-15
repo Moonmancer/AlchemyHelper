@@ -10902,7 +10902,10 @@ function App() {
                           const matched = findMatchingRecipe(dominantElement);
                           // Vorhandenen Namen zeigen; bei neuem Rezept Match-Namen als Vorschlag
                           setSaveRecipeName(
-                            existing?.product ?? matched?.product ?? "",
+                            existing?.product ??
+                              matched?.product ??
+                              currentMatchedSecret?.name ??
+                              "",
                           );
                           setSaveModalOpen(true);
                         },
