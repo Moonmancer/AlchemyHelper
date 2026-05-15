@@ -9,4 +9,5 @@ window.EXTRA_ITEMS = [
   { id: 30414, name: "Timeless Eel", type: "Extra" },
   { id: 40363, name: "Iroh's Club", type: "Extra" },
   { id: 30426, name: "Haruna Tea", type: "Extra" },
+  { id: 522, name: "Mastela Fruit", type: "Extra" },
 ];
