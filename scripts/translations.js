@@ -181,6 +181,17 @@ window.UI_T = {
     stockCrafting: "Crafting",
     stockUsable: "Usable",
     stockEtc: "Etc",
+    dataTransferLabel: "Einstellungen exportieren / importieren",
+    dataTransferHint:
+      "Exportiere alle Einstellungen als JSON-Datei und importiere sie auf einem anderen Rechner.",
+    exportLabel: "Exportieren",
+    importLabel: "Importieren",
+    importConfirm:
+      "Alle aktuellen Einstellungen werden \u00fcberschrieben. Fortfahren?",
+    importError: "Ung\u00fcltige Datei \u2014 Import abgebrochen.",
+    ingredientVisibilityLabel: "Zutaten-Filter",
+    ingredientVisibilityHint:
+      "Deaktivierte Items erscheinen weder im Zutaten-Picker noch bei der automatischen Auswahl.",
   },
   en: {
     appTitle: "Alchemist's Lexicon",
@@ -364,5 +375,16 @@ window.UI_T = {
     stockCrafting: "Crafting",
     stockUsable: "Usable",
     stockEtc: "Etc",
+    dataTransferLabel: "Export / Import Settings",
+    dataTransferHint:
+      "Export all settings as a JSON file and import them on another device.",
+    exportLabel: "Export",
+    importLabel: "Import",
+    importConfirm:
+      "All current settings will be overwritten. Continue?",
+    importError: "Invalid file \u2014 import aborted.",
+    ingredientVisibilityLabel: "Ingredient Filter",
+    ingredientVisibilityHint:
+      "Disabled items will not appear in the ingredient picker or automatic selection.",
   },
 };
