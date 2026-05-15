@@ -2653,7 +2653,9 @@ function App() {
               minQuality: currentMatchedSecret.minQuality || 0,
               id: currentMatchedSecret.id,
               rank: "Secret",
-              matchedRecipeId: currentMatchedSecret.mainIngredient,
+              matchedRecipeId:
+                currentMatchedSecret.product ??
+                currentMatchedSecret.mainIngredient,
             }
           : null)
       : null);
