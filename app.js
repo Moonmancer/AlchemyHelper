@@ -12491,7 +12491,11 @@ function App() {
                                   },
                                   "+",
                                   selectedAgent.quality,
-                                  " Qual.",
+                                  " ",
+                                  /*#__PURE__*/ React.createElement("i", {
+                                    className:
+                                      "fa-solid fa-wand-magic-sparkles",
+                                  }),
                                 ),
                             ),
                             /*#__PURE__*/ React.createElement(
