@@ -2291,12 +2291,7 @@ function App() {
       typeof window.SECRET_RECIPES !== "undefined" &&
       window.SECRET_RECIPES.length > 0
     ) {
-      const filledSlots = cauldron.filter(Boolean);
-      const avgQuality =
-        filledSlots.length > 0
-          ? filledSlots.reduce((sum, m) => sum + m.quality, 0) /
-            filledSlots.length
-          : 0;
+      const avgQuality = stats.quality;
       const newlyFound = window.SECRET_RECIPES.filter((secret) => {
         if (foundSecrets.includes(secret.id)) return false;
         if (
