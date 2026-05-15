@@ -1273,10 +1273,34 @@ function App() {
         lineOff4 += l.length + 1;
         return s;
       });
+      // Fuzzy per-word check: each word of the recipe must appear in the line
+      // with at most 1 edit (handles OCR typos like "Heawy"→"Heavy", "Armar"→"Armor")
+      const fuzzyWordInLine = (word, line) => {
+        if (line.includes(word)) return true;
+        for (let delta = -1; delta <= 1; delta++) {
+          const wLen = word.length + delta;
+          if (wLen < 3 || wLen > line.length) continue;
+          for (let s = 0; s <= line.length - wLen; s++) {
+            if (levenshtein(word, line.slice(s, s + wLen)) <= 1) return true;
+          }
+        }
+        return false;
+      };
       allRecipes.forEach((r) => {
         if (!r.product || r.product.length < 4) return;
         const rF = flat(r.product);
-        const li = ocrLinesFlat.findIndex((lf) => lf.includes(rF));
+        const rWords = r.product
+          .toLowerCase()
+          .replace(/[^a-z ]/g, "")
+          .split(" ")
+          .map((w) => flat(w))
+          .filter((w) => w.length >= 4);
+        const li = ocrLinesFlat.findIndex(
+          (lf) =>
+            lf.includes(rF) ||
+            (rWords.length >= 2 &&
+              rWords.every((rw) => fuzzyWordInLine(rw, lf))),
+        );
         if (li !== -1) addCandidate(r.product, false, ocrLineStarts[li]);
       });
 
@@ -1328,7 +1352,8 @@ function App() {
           if (score === Infinity) {
             const dist = levenshtein(rFlat, nFlat);
             const maxLen = Math.max(rFlat.length, nFlat.length);
-            if (maxLen > 0 && dist / maxLen < 0.28) score = dist;
+            const levThreshold = maxLen >= 12 ? 0.35 : 0.28;
+            if (maxLen > 0 && dist / maxLen < levThreshold) score = dist;
           }
           if (score < Infinity)
             allMatches.push({
@@ -1358,7 +1383,13 @@ function App() {
         if (unique.length === 1 || singleExact) {
           const best = unique[0].recipe;
           // Push once per occurrence (e.g. Water Stone ×2 → 2 queue entries)
-          const times = Math.min(count, 5 - ocrQueue.length);
+          // Subtract already-queued entries for this recipe to prevent duplicates
+          // from multiple strategies recognising the same OCR line differently.
+          const alreadyQueued = ocrQueue.filter(
+            (q) => q.type === "exact" && q.recipeId === best.id,
+          ).length;
+          const times = Math.min(count - alreadyQueued, 5 - ocrQueue.length);
+          if (times <= 0) return;
           for (let i = 0; i < times; i++)
             ocrQueue.push({
               type: "exact",
