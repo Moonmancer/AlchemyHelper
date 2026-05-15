@@ -74,4 +74,15 @@ window.SECRET_RECIPES = [
     catalyst: "Cyfar",
     extraItemIds: [40363],
   },
+  {
+    id: 40124,
+    name: "Charging Rod",
+    ingredients: ["Alloy", "Magic", "Food", "Magic"],
+    potionBase: 657,
+    element: "Air",
+    minScore: 140,
+    minQuality: 90,
+    catalyst: "Blue Gemstone",
+    extraItemIds: [30426],
+  },
 ];
