@@ -1138,8 +1138,8 @@ function App() {
         const idata = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const d = idata.data;
         for (let i = 0; i < d.length; i += 4) {
-          const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-          const val = gray < 160 ? 0 : 255;
+          const maxCh = Math.max(d[i], d[i + 1], d[i + 2]);
+          const val = maxCh < 128 ? 0 : 255;
           d[i] = d[i + 1] = d[i + 2] = val;
         }
         ctx.putImageData(idata, 0, 0);
@@ -1191,7 +1191,7 @@ function App() {
       //   - Genuinely repeated entries ("Water Stone" × 2) get count=2
       const candidateMap = new Map(); // flat → { bestText, count }
 
-      const addCandidate = (raw, countable) => {
+      const addCandidate = (raw, countable, pos = Infinity) => {
         const text2 = raw.trim();
         if (text2.length < 3) return;
         const f = flat(text2);
@@ -1200,10 +1200,12 @@ function App() {
           // Only increment count if this strategy is allowed to count duplicates
           // (Strategy 1 = parentheses = the only reliable count source)
           if (countable) candidateMap.get(f).count++;
+          if (pos < candidateMap.get(f).pos) candidateMap.get(f).pos = pos;
         } else {
           candidateMap.set(f, {
             bestText: text2,
             count: 1,
+            pos,
           });
         }
       };
@@ -1213,13 +1215,14 @@ function App() {
       // countable=true: each paren occurrence = one real recipe slot
       const parenRe = /[([{]\s*([A-Z][^)\]\}\n]{1,45})[)\]\}]/g;
       let m;
-      while ((m = parenRe.exec(text)) !== null) addCandidate(m[1], true);
+      while ((m = parenRe.exec(text)) !== null)
+        addCandidate(m[1], true, m.index);
 
       // Strategy 1b: unclosed paren at end of line (e.g. OCR drops closing bracket)
       // countable=true: same logic as Strategy 1
       const openParenRe = /[([{]\s*([A-Z][^\n)\]\}]{1,45})\s*$/gm;
       while ((m = openParenRe.exec(text)) !== null)
-        addCandidate(m[1].trim(), true);
+        addCandidate(m[1].trim(), true, m.index);
 
       // Strategy 2: R1: / R1) / Ri: with optional paren around name
       // S/s added as common OCR confusion for digit 5 (e.g. "RS:" instead of "R5:")
@@ -1227,19 +1230,22 @@ function App() {
       const rRe = /[Rr][lLiI1\dSs][^A-Za-z\n]{0,4}([A-Z][^\n(]{1,45})/g;
       while ((m = rRe.exec(text)) !== null) {
         const c = m[1].replace(/[()[\]{}'"`]/g, "").trim();
-        if (c.length > 2) addCandidate(c, false);
+        if (c.length > 2) addCandidate(c, false, m.index);
       }
 
       // Strategy 3: every line that starts with a capital and looks like a name
       // countable=false: Strategy 1 already counts bracket-wrapped entries
+      let lineOff3 = 0;
       text.split("\n").forEach((line) => {
+        const lineStart = lineOff3;
+        lineOff3 += line.length + 1;
         const clean = line
           .replace(/^[^A-Z]+/, "")
           .replace(/\s*[xX×]\s*\d+\s*$/, "") // strip quantity suffix e.g. "x1", "×3"
           .replace(/[)\]\}\s]+$/, "")
           .trim();
         if (/^[A-Z][a-zA-Z' 0-9]{3,40}$/.test(clean))
-          addCandidate(clean, false);
+          addCandidate(clean, false, lineStart);
       });
 
       // Strategy 4: reverse lookup — for each recipe name check if its flat form
@@ -1247,24 +1253,28 @@ function App() {
       // (e.g. "(shade Ore)" where OCR lowercased the first letter).
       // countable=false: not a reliable count source
       const allRecipes = [...RECIPES, ...customRecipes];
-      const ocrLinesFlat = text.split("\n").map((l) => flat(l));
+      const ocrLines4 = text.split("\n");
+      const ocrLinesFlat = ocrLines4.map((l) => flat(l));
+      let lineOff4 = 0;
+      const ocrLineStarts = ocrLines4.map((l) => {
+        const s = lineOff4;
+        lineOff4 += l.length + 1;
+        return s;
+      });
       allRecipes.forEach((r) => {
         if (!r.product || r.product.length < 4) return;
         const rF = flat(r.product);
-        if (ocrLinesFlat.some((lf) => lf.includes(rF)))
-          addCandidate(r.product, false);
+        const li = ocrLinesFlat.findIndex((lf) => lf.includes(rF));
+        if (li !== -1) addCandidate(r.product, false, ocrLineStarts[li]);
       });
 
       const dedupedCandidates = [...candidateMap.values()];
-      // Sort by position in OCR text so the order matches the screenshot (R1-->R5)
-      const ocrTextFlat = flat(text);
+      // Sort by the earliest position at which the candidate was found in the OCR text
       dedupedCandidates.sort((a, b) => {
-        const posA = ocrTextFlat.indexOf(flat(a.bestText));
-        const posB = ocrTextFlat.indexOf(flat(b.bestText));
-        if (posA === -1 && posB === -1) return 0;
-        if (posA === -1) return 1;
-        if (posB === -1) return -1;
-        return posA - posB;
+        if (a.pos === Infinity && b.pos === Infinity) return 0;
+        if (a.pos === Infinity) return 1;
+        if (b.pos === Infinity) return -1;
+        return a.pos - b.pos;
       });
       console.log(
         "[OCR candidates]",
@@ -5119,9 +5129,14 @@ function App() {
                           const selectedIds = new Set(
                             sessionRecipes.map((e) => e.recipeId),
                           );
-                          const selected = filtered.filter((r) =>
-                            selectedIds.has(r.id),
-                          );
+                          const seenSel = new Set();
+                          const selected = sessionRecipes
+                            .map((e) => {
+                              if (seenSel.has(e.recipeId)) return null;
+                              seenSel.add(e.recipeId);
+                              return filtered.find((r) => r.id === e.recipeId);
+                            })
+                            .filter(Boolean);
                           const favs = filtered.filter(
                             (r) =>
                               favorites.has(r.id) &&
