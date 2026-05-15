@@ -2587,8 +2587,68 @@ function App() {
     if (!isCustomMode || stats.count < 4) return null;
     return findMatchingRecipe(dominantElement);
   }, [isCustomMode, dominantElement, customSlotTypes, catalyst, stats.count]);
+  const currentMatchedSecret = useMemo(() => {
+    if (
+      !isCustomMode ||
+      typeof window.SECRET_RECIPES === "undefined" ||
+      window.SECRET_RECIPES.length === 0
+    )
+      return null;
+    return (
+      window.SECRET_RECIPES.find((secret) => {
+        if (!secret.ingredients.every((type, i) => customSlotTypes[i] === type))
+          return false;
+        if (
+          secret.mainIngredient !== undefined &&
+          cauldron[0]?.id !== secret.mainIngredient
+        )
+          return false;
+        if (secret.agent !== undefined && selectedAgent?.name !== secret.agent)
+          return false;
+        if (
+          secret.minElement &&
+          dominantElement.toLowerCase() !== secret.minElement.toLowerCase()
+        )
+          return false;
+        if (stats.quality < (secret.minQuality || 0)) return false;
+        if (secret.catalyst !== undefined && catalyst.name !== secret.catalyst)
+          return false;
+        if (secret.potionBase !== undefined) {
+          const rankToPbId = {
+            Basic: 645,
+            Intermediate: 656,
+            Advanced: 657,
+            Special: 610,
+          };
+          if (rankToPbId[customRank] !== secret.potionBase) return false;
+        }
+        return true;
+      }) || null
+    );
+  }, [
+    isCustomMode,
+    cauldron,
+    customSlotTypes,
+    catalyst,
+    selectedAgent,
+    stats,
+    dominantElement,
+    customRank,
+  ]);
   const effectiveRecipe =
-    selectedRecipe || (isCustomMode ? customMatchedRecipe : null);
+    selectedRecipe ||
+    (isCustomMode
+      ? customMatchedRecipe ||
+        (currentMatchedSecret
+          ? {
+              product: currentMatchedSecret.name,
+              element: currentMatchedSecret.minElement || "None",
+              minQuality: currentMatchedSecret.minQuality || 0,
+              id: currentMatchedSecret.id,
+              rank: "Secret",
+            }
+          : null)
+      : null);
   const isEffectiveRecipeValid = useMemo(() => {
     if (!effectiveRecipe || stats.count < 4) return false;
     const isCorrectElement = dominantElement === effectiveRecipe.element;
