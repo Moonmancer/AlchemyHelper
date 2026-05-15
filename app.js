@@ -5074,12 +5074,42 @@ function App() {
                         className: "px-6 pt-4 pb-2 flex-shrink-0",
                       },
                       /*#__PURE__*/ React.createElement(
-                        "p",
-                        {
-                          className:
-                            "text-sm text-slate-500 dark:text-slate-400 mb-3",
-                        },
-                        t("step2Desc"),
+                        "div",
+                        { className: "flex items-center justify-between mb-3" },
+                        /*#__PURE__*/ React.createElement(
+                          "p",
+                          {
+                            className:
+                              "text-sm text-slate-500 dark:text-slate-400",
+                          },
+                          t("step2Desc"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className:
+                              "flex items-center gap-1.5 flex-shrink-0",
+                          },
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-xs text-slate-500 dark:text-slate-400",
+                            },
+                            t("focusModeShort"),
+                          ),
+                          /*#__PURE__*/ React.createElement(
+                            "button",
+                            {
+                              onClick: toggleFocusMode,
+                              title: t("focusModeLabel"),
+                              className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${focusMode ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                            },
+                            /*#__PURE__*/ React.createElement("span", {
+                              className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${focusMode ? "translate-x-5" : "translate-x-0"}`,
+                            }),
+                          ),
+                        ),
                       ),
                       /*#__PURE__*/ React.createElement(
                         "div",
@@ -7616,12 +7646,42 @@ function App() {
                       "div",
                       { className: "px-6 pt-4 pb-2 flex-shrink-0" },
                       /*#__PURE__*/ React.createElement(
-                        "p",
-                        {
-                          className:
-                            "text-sm text-slate-500 dark:text-slate-400",
-                        },
-                        t("step4Desc"),
+                        "div",
+                        { className: "flex items-center justify-between" },
+                        /*#__PURE__*/ React.createElement(
+                          "p",
+                          {
+                            className:
+                              "text-sm text-slate-500 dark:text-slate-400",
+                          },
+                          t("step4Desc"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className:
+                              "flex items-center gap-1.5 flex-shrink-0",
+                          },
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-xs text-slate-500 dark:text-slate-400",
+                            },
+                            t("simplifiedCraftShort"),
+                          ),
+                          /*#__PURE__*/ React.createElement(
+                            "button",
+                            {
+                              onClick: toggleSimplifiedCraftView,
+                              title: t("simplifiedCraftLabel"),
+                              className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${simplifiedCraftView ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                            },
+                            /*#__PURE__*/ React.createElement("span", {
+                              className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${simplifiedCraftView ? "translate-x-5" : "translate-x-0"}`,
+                            }),
+                          ),
+                        ),
                       ),
                     ),
                     simplifiedCraftView
@@ -8413,12 +8473,42 @@ function App() {
                         className: "px-6 pt-4 pb-2 flex-shrink-0",
                       },
                       /*#__PURE__*/ React.createElement(
-                        "p",
-                        {
-                          className:
-                            "text-sm text-slate-500 dark:text-slate-400",
-                        },
-                        t("step5Desc"),
+                        "div",
+                        { className: "flex items-center justify-between" },
+                        /*#__PURE__*/ React.createElement(
+                          "p",
+                          {
+                            className:
+                              "text-sm text-slate-500 dark:text-slate-400",
+                          },
+                          t("step5Desc"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className:
+                              "flex items-center gap-1.5 flex-shrink-0",
+                          },
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-xs text-slate-500 dark:text-slate-400",
+                            },
+                            t("simplifiedDeliveryShort"),
+                          ),
+                          /*#__PURE__*/ React.createElement(
+                            "button",
+                            {
+                              onClick: toggleSimplifiedDelivery,
+                              title: t("simplifiedDeliveryLabel"),
+                              className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${simplifiedDelivery ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                            },
+                            /*#__PURE__*/ React.createElement("span", {
+                              className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${simplifiedDelivery ? "translate-x-5" : "translate-x-0"}`,
+                            }),
+                          ),
+                        ),
                       ),
                     ),
                     simplifiedDelivery

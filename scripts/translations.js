@@ -74,10 +74,12 @@
     copiedBtn: "Kopiert!",
     navigateBtn: "Navigieren",
     simplifiedDeliveryLabel: "Vereinfachte Auslieferung",
+    simplifiedDeliveryShort: "Vereinfacht",
     simplifiedDeliveryHint:
       "Zeigt beim Ausliefern nur die Karten an – NPCs können ohne Rezeptzuweisung frei ausgewählt werden.",
     simplifiedDeliveryCount: "{n} / {max} NPCs ausgewählt",
     simplifiedCraftLabel: "Vereinfachte Zubereiten-Ansicht",
+    simplifiedCraftShort: "Vereinfacht",
     simplifiedCraftHint: "Zeigt beim Zubereiten ein Rezept nach dem anderen an.",
     simplifiedCraftCount: "Rezept {current} von {total}",
     ignoreEmptyItemsLabel: "Leere Items ignorieren",
@@ -168,6 +170,7 @@
     rememberIngredientsResetConfirm:
       "Wirklich alle gespeicherten Zutaten-Einstellungen löschen?",
     focusModeLabel: "Fokus-Modus",
+    focusModeShort: "Fokus",
     focusModeHint:
       "Zeigt beim Zutaten anpassen nur ein Rezept mit seinen Sub-Crafts. Weiter-Button wechselt zum nächsten Rezept.",
     focusModeNext: "N\u00e4chstes Rezept",
@@ -269,10 +272,12 @@
     copiedBtn: "Copied!",
     navigateBtn: "Navigate",
     simplifiedDeliveryLabel: "Simplified Delivery",
+    simplifiedDeliveryShort: "Simplified",
     simplifiedDeliveryHint:
       "In the Deliver step, shows only maps – NPCs can be selected freely without per-recipe assignment.",
     simplifiedDeliveryCount: "{n} / {max} NPCs selected",
     simplifiedCraftLabel: "Simplified Craft View",
+    simplifiedCraftShort: "Simplified",
     simplifiedCraftHint: "In the Craft step, shows one recipe at a time.",
     simplifiedCraftCount: "Recipe {current} of {total}",
     ignoreEmptyItemsLabel: "Ignore Empty Items",
@@ -364,6 +369,7 @@
     rememberIngredientsResetConfirm:
       "Really delete all saved ingredient settings?",
     focusModeLabel: "Focus Mode",
+    focusModeShort: "Focus",
     focusModeHint:
       "In the Adjust Ingredients step, shows only one recipe with its sub-crafts. Next button advances to the next recipe.",
     focusModeNext: "Next Recipe",
