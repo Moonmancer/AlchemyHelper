@@ -18,6 +18,6 @@ window.SECRET_RECIPES = [
     minElement: "Fire",
     minQuality: 100,
     catalyst: "Garm's Essence",
-    extraItemIds: ["extra_harvested_soul"],
+    extraItemIds: ["40129"],
   },
 ];

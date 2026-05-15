@@ -4,5 +4,5 @@
 //   name - Anzeigename des Items (string)
 //   type - Materialtyp: Alloy | Beast | Food | Magic | Sand | Wood
 window.EXTRA_ITEMS = [
-  { id: "extra_harvested_soul", name: "Harvested Soul", type: "Extra" },
+  { id: "40129", name: "Harvested Soul", type: "Extra" },
 ];
