@@ -1137,10 +1137,22 @@ function App() {
         // Grayscale + threshold for pixel fonts
         const idata = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const d = idata.data;
+        // Pass 1: detect background brightness
+        let totalLum = 0;
+        for (let i = 0; i < d.length; i += 4)
+          totalLum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        const darkBg = totalLum / (d.length / 4) < 128;
+        // Pass 2: threshold — black text on white background for Tesseract
         for (let i = 0; i < d.length; i += 4) {
-          const maxCh = Math.max(d[i], d[i + 1], d[i + 2]);
-          const val = maxCh < 128 ? 0 : 255;
-          d[i] = d[i + 1] = d[i + 2] = val;
+          let isText;
+          if (darkBg) {
+            // Dark background: text is bright or colorful → high max channel
+            isText = Math.max(d[i], d[i + 1], d[i + 2]) >= 128;
+          } else {
+            // Light background: text is dark → low luminance
+            isText = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2] < 160;
+          }
+          d[i] = d[i + 1] = d[i + 2] = isText ? 0 : 255;
         }
         ctx.putImageData(idata, 0, 0);
         URL.revokeObjectURL(url);
