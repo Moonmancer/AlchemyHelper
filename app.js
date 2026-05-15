@@ -10430,16 +10430,31 @@ function App() {
                         className: "flex gap-2",
                       },
                       ["Basic", "Intermediate", "Advanced", "Special"].map(
-                        (rank) =>
-                          /*#__PURE__*/ React.createElement(
+                        (rank) => {
+                          const pbId = {
+                            Basic: 645,
+                            Intermediate: 656,
+                            Advanced: 657,
+                            Special: 610,
+                          }[rank];
+                          const pbName =
+                            POTION_BASE.find((p) => p.id === pbId)?.name ??
+                            rank;
+                          return /*#__PURE__*/ React.createElement(
                             "button",
                             {
                               key: rank,
                               onClick: () => setCustomRank(rank),
-                              className: `flex-1 py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${customRank === rank ? "bg-indigo-500 border-indigo-500 text-white shadow-sm" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-500"}`,
+                              className: `flex-1 py-1.5 px-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1 ${customRank === rank ? "bg-indigo-500 border-indigo-500 text-white shadow-sm" : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-500"}`,
                             },
+                            /*#__PURE__*/ React.createElement(ItemIcon, {
+                              id: pbId,
+                              name: pbName,
+                              size: "w-4 h-4",
+                            }),
                             rank,
-                          ),
+                          );
+                        },
                       ),
                     ),
                   ),
