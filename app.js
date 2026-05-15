@@ -5160,7 +5160,12 @@ function App() {
                                     }),
                                 ),
                                 /*#__PURE__*/ React.createElement(ItemIcon, {
-                                  id: recipe.matchedRecipeId ?? recipe.id,
+                                  id:
+                                    recipe.matchedRecipeId ??
+                                    window.SECRET_RECIPES?.find(
+                                      (s) => s.name === recipe.product,
+                                    )?.id ??
+                                    recipe.id,
                                   name: recipe.product,
                                   size: "w-7 h-7 flex-shrink-0",
                                 }),
@@ -7588,7 +7593,11 @@ function App() {
                                     );
                                     if (!recipe) return null;
                                     const productId =
-                                      recipe.matchedRecipeId ?? recipe.id;
+                                      recipe.matchedRecipeId ??
+                                      window.SECRET_RECIPES?.find(
+                                        (s) => s.name === recipe.product,
+                                      )?.id ??
+                                      recipe.id;
                                     const mats = Object.entries(
                                       getAllMats(entry._id),
                                     ).sort(
@@ -10675,7 +10684,12 @@ function App() {
                                     className: `font-bold text-lg flex items-center gap-3 ${isSelected ? "text-indigo-800 dark:text-indigo-300" : "text-slate-800 dark:text-slate-200"}`,
                                   },
                                   /*#__PURE__*/ React.createElement(ItemIcon, {
-                                    id: recipe.matchedRecipeId ?? recipe.id,
+                                    id:
+                                      recipe.matchedRecipeId ??
+                                      window.SECRET_RECIPES?.find(
+                                        (s) => s.name === recipe.product,
+                                      )?.id ??
+                                      recipe.id,
                                     name: recipe.product,
                                     size: "w-7 h-7",
                                   }),
@@ -11247,7 +11261,12 @@ function App() {
                                       "flex items-center gap-2 flex-1 min-w-0 text-left",
                                   },
                                   /*#__PURE__*/ React.createElement(ItemIcon, {
-                                    id: recipe.matchedRecipeId ?? recipe.id,
+                                    id:
+                                      recipe.matchedRecipeId ??
+                                      window.SECRET_RECIPES?.find(
+                                        (s) => s.name === recipe.product,
+                                      )?.id ??
+                                      recipe.id,
                                     name: recipe.product,
                                     size: "w-8 h-8 flex-shrink-0",
                                   }),
@@ -11852,7 +11871,12 @@ function App() {
                               className: `flex items-center gap-2 px-3 py-2 ${noLager ? "bg-slate-50 dark:bg-slate-900" : groupOk ? "bg-green-50 dark:bg-green-900/20" : "bg-red-50 dark:bg-red-900/20"}`,
                             },
                             /*#__PURE__*/ React.createElement(ItemIcon, {
-                              id: recipe.matchedRecipeId ?? recipe.id,
+                              id:
+                                recipe.matchedRecipeId ??
+                                window.SECRET_RECIPES?.find(
+                                  (s) => s.name === recipe.product,
+                                )?.id ??
+                                recipe.id,
                               name: recipe.product,
                               size: "w-5 h-5 flex-shrink-0",
                             }),
@@ -12961,7 +12985,12 @@ function App() {
                       "flex items-center gap-3 w-full text-left px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all",
                   },
                   /*#__PURE__*/ React.createElement(ItemIcon, {
-                    id: recipe.matchedRecipeId ?? recipe.id,
+                    id:
+                      recipe.matchedRecipeId ??
+                      window.SECRET_RECIPES?.find(
+                        (s) => s.name === recipe.product,
+                      )?.id ??
+                      recipe.id,
                     name: recipe.product,
                     size: "w-8 h-8",
                   }),
