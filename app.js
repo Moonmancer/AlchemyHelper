@@ -11045,26 +11045,15 @@ function App() {
                                 className:
                                   "flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200",
                               },
-                              TYPE_ICONS[item.type] &&
-                                /*#__PURE__*/ React.createElement(ItemIcon, {
-                                  id: TYPE_ICONS[item.type],
-                                  name: item.type,
-                                  size: "w-5 h-5 flex-shrink-0",
-                                }),
+                              /*#__PURE__*/ React.createElement(ItemIcon, {
+                                id: item.id,
+                                name: item.name,
+                                size: "w-5 h-5 flex-shrink-0",
+                              }),
                               /*#__PURE__*/ React.createElement(
                                 "span",
                                 { className: "font-semibold" },
                                 item.name,
-                              ),
-                              /*#__PURE__*/ React.createElement(
-                                "span",
-                                {
-                                  className:
-                                    "text-xs text-yellow-600 dark:text-yellow-400",
-                                },
-                                "(",
-                                item.type,
-                                ")",
                               ),
                             ),
                           ),
