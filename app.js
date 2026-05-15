@@ -2495,6 +2495,13 @@ function App() {
         newCauldron[swapSlotIndex] = materialItem;
         return newCauldron;
       });
+      if (isCustomMode && customSlotTypes[swapSlotIndex] === null) {
+        setCustomSlotTypes((prev) => {
+          const next = [...prev];
+          next[swapSlotIndex] = materialItem.type;
+          return next;
+        });
+      }
       setSwapSlotIndex(null);
       setSwapElementFilter(null);
       setSwapQualityFilter(null);
