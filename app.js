@@ -11071,20 +11071,15 @@ function App() {
                   ),
                   typeof window.SECRET_RECIPES !== "undefined" &&
                     typeof window.EXTRA_ITEMS !== "undefined" &&
-                    foundSecrets.length > 0 &&
+                    currentMatchedSecret !== null &&
                     (() => {
-                      const allExtraItems = window.SECRET_RECIPES.filter((s) =>
-                        foundSecrets.includes(s.id),
+                      const allExtraItems = (
+                        currentMatchedSecret.extraItemIds || []
                       )
-                        .flatMap((s) => s.extraItemIds || [])
                         .map((id) =>
                           window.EXTRA_ITEMS.find((e) => e.id === id),
                         )
-                        .filter(Boolean)
-                        .filter(
-                          (item, idx, arr) =>
-                            arr.findIndex((x) => x.id === item.id) === idx,
-                        );
+                        .filter(Boolean);
                       if (allExtraItems.length === 0) return null;
                       return /*#__PURE__*/ React.createElement(
                         "div",
