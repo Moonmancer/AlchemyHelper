@@ -11,14 +11,13 @@
 //   catalyst     - Katalysator-Name-String (exakter Vergleich); "none" für keinen Katalysator
 //   extraItemIds - Array von IDs aus extra-items.js, die dieses Secret freischaltet
 window.SECRET_RECIPES = [
-  // Beispiel:
-  // {
-  //   id: "secret_1",
-  //   name: "Schattentrank",
-  //   ingredients: ["Food", "Magic", "Wood", "Sand"],
-  //   minElement: "Fire",
-  //   minQuality: 80,
-  //   catalyst: "none",
-  //   extraItemIds: ["extra_1"],
-  // },
+  {
+    id: "secret_caelum",
+    name: "Caelum",
+    ingredients: ["Magic", "Magic", "Magic", "Magic"],
+    minElement: "Fire",
+    minQuality: 100,
+    catalyst: "Garm's Essence",
+    extraItemIds: ["extra_harvested_soul"],
+  },
 ];
