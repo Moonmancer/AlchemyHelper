@@ -75,10 +75,10 @@ window.UI_T = {
     navigateBtn: "Navigieren",
     simplifiedDeliveryLabel: "Vereinfachte Auslieferung",
     simplifiedDeliveryHint:
-      "Zeigt in Schritt 5 nur die Karten an – NPCs ohne Rezeptzuweisung auswählen.",
+      "Zeigt beim Ausliefern nur die Karten an – NPCs können ohne Rezeptzuweisung frei ausgewählt werden.",
     simplifiedDeliveryCount: "{n} / {max} NPCs ausgewählt",
     simplifiedCraftLabel: "Vereinfachte Zubereiten-Ansicht",
-    simplifiedCraftHint: "Zeigt in Schritt 4 ein Rezept auf einmal an.",
+    simplifiedCraftHint: "Zeigt beim Zubereiten ein Rezept nach dem anderen an.",
     simplifiedCraftCount: "Rezept {current} von {total}",
     ignoreEmptyItemsLabel: "Leere Items ignorieren",
     ignoreEmptyItemsHint:
@@ -152,7 +152,7 @@ window.UI_T = {
     ingredientShort: "Zutat",
     noneLabel: "Keiner",
     lowStock: "knapp – nur noch {amount}",
-    lowStockThresholdLabel: "Knapp-Schwellenwert",
+    lowStockThresholdLabel: "Warnschwelle Lagerbestand",
     lowStockThresholdHint:
       "Zutaten mit weniger als diesem Bestand gelten als knapp.",
     navDesc: "Navigiere zu den ausgewählten NPCs.",
@@ -163,16 +163,17 @@ window.UI_T = {
     settingsReset: "Alle aktivieren",
     rememberIngredientsLabel: "Zutaten je Rezept merken",
     rememberIngredientsHint:
-      "Merkt sich die gewählten Zutaten und den Agent je Rezept im Speicher und nutzt diese bei erneuter Auswahl. Toggle OFF = automatische Auswahl.",
+      "Merkt sich die zuletzt gewählten Zutaten und den Agent je Rezept. Bei erneuter Auswahl werden diese automatisch vorausgewählt.",
     rememberIngredientsReset: "Gespeicherte Zutaten löschen",
     rememberIngredientsResetConfirm:
       "Wirklich alle gespeicherten Zutaten-Einstellungen löschen?",
     focusModeLabel: "Fokus-Modus",
     focusModeHint:
-      "Zeigt in Schritt 2 nur ein Rezept mit seinen Sub-Crafts. Weiter-Button wechselt zum n\u00e4chsten Rezept.",
+      "Zeigt beim Zutaten anpassen nur ein Rezept mit seinen Sub-Crafts. Weiter-Button wechselt zum nächsten Rezept."
     focusModeNext: "N\u00e4chstes Rezept",
     splitByStockLabel: "Materialliste aufteilen",
-    splitByStockHint: "Teilt die Materialliste auf.",
+    splitByStockHint:
+      "Teilt die Materialliste im Plan nach Lagerbestand (vorhanden / fehlend) oder nach Typ auf.",
     splitModeNone: "Keine",
     splitModeStock: "Lager",
     splitModeType: "Typ",
@@ -268,10 +269,10 @@ window.UI_T = {
     navigateBtn: "Navigate",
     simplifiedDeliveryLabel: "Simplified Delivery",
     simplifiedDeliveryHint:
-      "Shows only maps in step 5 – select NPCs without per-recipe assignment.",
+      "In the Deliver step, shows only maps – NPCs can be selected freely without per-recipe assignment.",
     simplifiedDeliveryCount: "{n} / {max} NPCs selected",
     simplifiedCraftLabel: "Simplified Craft View",
-    simplifiedCraftHint: "Shows one recipe at a time in step 4.",
+    simplifiedCraftHint: "In the Craft step, shows one recipe at a time.",
     simplifiedCraftCount: "Recipe {current} of {total}",
     ignoreEmptyItemsLabel: "Ignore Empty Items",
     ignoreEmptyItemsHint:
@@ -346,7 +347,7 @@ window.UI_T = {
     ingredientShort: "Ingr.",
     noneLabel: "None",
     lowStock: "low – only {amount} left",
-    lowStockThresholdLabel: "Low Stock Threshold",
+    lowStockThresholdLabel: "Low Stock Warning Threshold",
     lowStockThresholdHint:
       "Ingredients with less than this amount are considered low.",
     navDesc: "Navigate to the selected NPCs.",
@@ -357,16 +358,17 @@ window.UI_T = {
     settingsReset: "Enable all",
     rememberIngredientsLabel: "Remember Ingredients per Recipe",
     rememberIngredientsHint:
-      "Remembers chosen ingredients and agent per recipe and uses them on re-selection. Toggle OFF = automatic selection.",
+      "Remembers the last chosen ingredients and agent per recipe. On re-selection they are pre-filled automatically.",
     rememberIngredientsReset: "Clear saved ingredients",
     rememberIngredientsResetConfirm:
       "Really delete all saved ingredient settings?",
     focusModeLabel: "Focus Mode",
     focusModeHint:
-      "In step 2, shows only one recipe with its sub-crafts. Next button advances to the next recipe.",
+      "In the Adjust Ingredients step, shows only one recipe with its sub-crafts. Next button advances to the next recipe.",
     focusModeNext: "Next Recipe",
     splitByStockLabel: "Split material list",
-    splitByStockHint: "Splits the material list into groups.",
+    splitByStockHint:
+      "Splits the material list in the Plan step by stock (available / missing) or by type.",
     splitModeNone: "None",
     splitModeStock: "Stock",
     splitModeType: "Type",

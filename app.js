@@ -1,4 +1,4 @@
-window.ALL_ITEMS = [
+﻿window.ALL_ITEMS = [
   ...MATERIALS,
   ...CATALYSTS.filter((c) => c.id !== "none"),
   ...POTION_BASE,
@@ -4116,7 +4116,7 @@ function App() {
                           className:
                             "text-sm font-bold text-slate-700 dark:text-slate-200",
                         },
-                        t("simplifiedDeliveryLabel"),
+                        t("focusModeLabel"),
                       ),
                       /*#__PURE__*/ React.createElement(
                         "p",
@@ -4124,17 +4124,17 @@ function App() {
                           className:
                             "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
                         },
-                        t("simplifiedDeliveryHint"),
+                        t("focusModeHint"),
                       ),
                     ),
                     /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: toggleSimplifiedDelivery,
-                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${simplifiedDelivery ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                        onClick: toggleFocusMode,
+                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${focusMode ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
                       },
                       /*#__PURE__*/ React.createElement("span", {
-                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${simplifiedDelivery ? "translate-x-5" : "translate-x-0"}`,
+                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${focusMode ? "translate-x-5" : "translate-x-0"}`,
                       }),
                     ),
                   ),
@@ -4190,7 +4190,7 @@ function App() {
                           className:
                             "text-sm font-bold text-slate-700 dark:text-slate-200",
                         },
-                        t("ignoreEmptyItemsLabel"),
+                        t("simplifiedDeliveryLabel"),
                       ),
                       /*#__PURE__*/ React.createElement(
                         "p",
@@ -4198,17 +4198,17 @@ function App() {
                           className:
                             "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
                         },
-                        t("ignoreEmptyItemsHint"),
+                        t("simplifiedDeliveryHint"),
                       ),
                     ),
                     /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: toggleIgnoreEmptyItems,
-                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${ignoreEmptyItems ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                        onClick: toggleSimplifiedDelivery,
+                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${simplifiedDelivery ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
                       },
                       /*#__PURE__*/ React.createElement("span", {
-                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${ignoreEmptyItems ? "translate-x-5" : "translate-x-0"}`,
+                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${simplifiedDelivery ? "translate-x-5" : "translate-x-0"}`,
                       }),
                     ),
                   ),
@@ -4286,7 +4286,7 @@ function App() {
                           className:
                             "text-sm font-bold text-slate-700 dark:text-slate-200",
                         },
-                        t("focusModeLabel"),
+                        t("ignoreEmptyItemsLabel"),
                       ),
                       /*#__PURE__*/ React.createElement(
                         "p",
@@ -4294,19 +4294,55 @@ function App() {
                           className:
                             "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
                         },
-                        t("focusModeHint"),
+                        t("ignoreEmptyItemsHint"),
                       ),
                     ),
                     /*#__PURE__*/ React.createElement(
                       "button",
                       {
-                        onClick: toggleFocusMode,
-                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${focusMode ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                        onClick: toggleIgnoreEmptyItems,
+                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${ignoreEmptyItems ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
                       },
                       /*#__PURE__*/ React.createElement("span", {
-                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${focusMode ? "translate-x-5" : "translate-x-0"}`,
+                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${ignoreEmptyItems ? "translate-x-5" : "translate-x-0"}`,
                       }),
                     ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    {
+                      className:
+                        "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4",
+                    },
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      null,
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-sm font-bold text-slate-700 dark:text-slate-200",
+                        },
+                        t("lowStockThresholdLabel"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
+                        },
+                        t("lowStockThresholdHint"),
+                      ),
+                    ),
+                    /*#__PURE__*/ React.createElement("input", {
+                      type: "number",
+                      min: "1",
+                      max: "9999",
+                      value: lowStockThreshold,
+                      onChange: (e) => saveLowStockThreshold(e.target.value),
+                      className:
+                        "w-20 text-center font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors",
+                    }),
                   ),
                   /*#__PURE__*/ React.createElement(
                     "div",
@@ -4356,42 +4392,6 @@ function App() {
                         ),
                       ),
                     ),
-                  ),
-                  /*#__PURE__*/ React.createElement(
-                    "div",
-                    {
-                      className:
-                        "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4",
-                    },
-                    /*#__PURE__*/ React.createElement(
-                      "div",
-                      null,
-                      /*#__PURE__*/ React.createElement(
-                        "p",
-                        {
-                          className:
-                            "text-sm font-bold text-slate-700 dark:text-slate-200",
-                        },
-                        t("lowStockThresholdLabel"),
-                      ),
-                      /*#__PURE__*/ React.createElement(
-                        "p",
-                        {
-                          className:
-                            "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
-                        },
-                        t("lowStockThresholdHint"),
-                      ),
-                    ),
-                    /*#__PURE__*/ React.createElement("input", {
-                      type: "number",
-                      min: "1",
-                      max: "9999",
-                      value: lowStockThreshold,
-                      onChange: (e) => saveLowStockThreshold(e.target.value),
-                      className:
-                        "w-20 text-center font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors",
-                    }),
                   ),
                 ),
                 /*#__PURE__*/ React.createElement(
@@ -4447,154 +4447,187 @@ function App() {
                     ),
                   ),
                 ),
-                ["Alloy", "Food", "Sand", "Wood", "Beast", "Magic"].map(
-                  (type) => {
-                    const typeItems = MATERIALS.filter((m) => m.type === type);
-                    if (!typeItems.length) return null;
-                    const activeCount = typeItems.filter(
-                      (m) => !disabledItems.has(m.id),
-                    ).length;
-                    return /*#__PURE__*/ React.createElement(
-                      "div",
-                      {
-                        key: type,
-                        className: "mb-6",
-                      },
-                      /*#__PURE__*/ React.createElement(
-                        "h3",
-                        {
-                          className:
-                            "text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2",
-                        },
-                        /*#__PURE__*/ React.createElement(ItemIcon, {
-                          id: TYPE_ICONS[type],
-                          name: type,
-                          size: "w-4 h-4",
-                        }),
-                        type,
-                        /*#__PURE__*/ React.createElement(
-                          "span",
-                          {
-                            className:
-                              "text-slate-400 dark:text-slate-600 font-medium normal-case tracking-normal",
-                          },
-                          activeCount,
-                          "/",
-                          typeItems.length,
-                        ),
-                      ),
-                      /*#__PURE__*/ React.createElement(
-                        "div",
-                        {
-                          className: "grid grid-cols-10 gap-2",
-                        },
-                        typeItems.map((m) => {
-                          const isOff = disabledItems.has(m.id);
-                          const mx = Math.max(m.fire, m.earth, m.air, m.water);
-                          const elBorder =
-                            mx > 0
-                              ? m.fire === mx
-                                ? "border-red-300 dark:border-red-700"
-                                : m.earth === mx
-                                  ? "border-green-300 dark:border-green-700"
-                                  : m.air === mx
-                                    ? "border-yellow-300 dark:border-yellow-700"
-                                    : "border-blue-300 dark:border-blue-700"
-                              : "border-slate-200 dark:border-slate-700";
-                          return /*#__PURE__*/ React.createElement(
-                            "button",
-                            {
-                              key: m.id,
-                              onClick: () => toggleDisabledItem(m.id),
-                              title: m.name,
-                              className: `flex flex-col items-center gap-1 p-2 rounded-xl border-2 text-center transition-all ${isOff ? "opacity-30 grayscale border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900" : `${elBorder} bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500`}`,
-                            },
-                            /*#__PURE__*/ React.createElement(ItemIcon, {
-                              id: m.id,
-                              name: m.name,
-                              size: "w-8 h-8",
-                            }),
-                            /*#__PURE__*/ React.createElement(
-                              "span",
-                              {
-                                className:
-                                  "text-[10px] font-semibold leading-tight text-slate-700 dark:text-slate-300 truncate w-full",
-                              },
-                              m.name,
-                            ),
-                          );
-                        }),
-                      ),
-                    );
-                  },
-                ),
                 /*#__PURE__*/ React.createElement(
                   "div",
                   {
-                    className: "mb-2",
+                    className:
+                      "bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4",
                   },
                   /*#__PURE__*/ React.createElement(
                     "h3",
                     {
                       className:
-                        "text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2",
+                        "text-sm font-bold text-slate-700 dark:text-slate-200 mb-1",
                     },
                     /*#__PURE__*/ React.createElement("i", {
-                      className: "fa-solid fa-flask-vial text-slate-400",
+                      className: "fa-solid fa-eye-slash text-indigo-400 mr-2",
                     }),
-                    t("agentLabel"),
-                    /*#__PURE__*/ React.createElement(
-                      "span",
-                      {
-                        className:
-                          "text-slate-400 dark:text-slate-600 font-medium normal-case tracking-normal",
-                      },
-                      AGENTS.filter((a) => !disabledItems.has(a.id)).length,
-                      "/",
-                      AGENTS.length,
-                    ),
+                    t("ingredientVisibilityLabel"),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "p",
+                    {
+                      className:
+                        "text-xs text-slate-500 dark:text-slate-400 mb-4",
+                    },
+                    t("ingredientVisibilityHint"),
+                  ),
+                  ["Alloy", "Food", "Sand", "Wood", "Beast", "Magic"].map(
+                    (type) => {
+                      const typeItems = MATERIALS.filter(
+                        (m) => m.type === type,
+                      );
+                      if (!typeItems.length) return null;
+                      const activeCount = typeItems.filter(
+                        (m) => !disabledItems.has(m.id),
+                      ).length;
+                      return /*#__PURE__*/ React.createElement(
+                        "div",
+                        {
+                          key: type,
+                          className: "mb-6",
+                        },
+                        /*#__PURE__*/ React.createElement(
+                          "h3",
+                          {
+                            className:
+                              "text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2",
+                          },
+                          /*#__PURE__*/ React.createElement(ItemIcon, {
+                            id: TYPE_ICONS[type],
+                            name: type,
+                            size: "w-4 h-4",
+                          }),
+                          type,
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-slate-400 dark:text-slate-600 font-medium normal-case tracking-normal",
+                            },
+                            activeCount,
+                            "/",
+                            typeItems.length,
+                          ),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className: "grid grid-cols-10 gap-2",
+                          },
+                          typeItems.map((m) => {
+                            const isOff = disabledItems.has(m.id);
+                            const mx = Math.max(
+                              m.fire,
+                              m.earth,
+                              m.air,
+                              m.water,
+                            );
+                            const elBorder =
+                              mx > 0
+                                ? m.fire === mx
+                                  ? "border-red-300 dark:border-red-700"
+                                  : m.earth === mx
+                                    ? "border-green-300 dark:border-green-700"
+                                    : m.air === mx
+                                      ? "border-yellow-300 dark:border-yellow-700"
+                                      : "border-blue-300 dark:border-blue-700"
+                                : "border-slate-200 dark:border-slate-700";
+                            return /*#__PURE__*/ React.createElement(
+                              "button",
+                              {
+                                key: m.id,
+                                onClick: () => toggleDisabledItem(m.id),
+                                title: m.name,
+                                className: `flex flex-col items-center gap-1 p-2 rounded-xl border-2 text-center transition-all ${isOff ? "opacity-30 grayscale border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900" : `${elBorder} bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500`}`,
+                              },
+                              /*#__PURE__*/ React.createElement(ItemIcon, {
+                                id: m.id,
+                                name: m.name,
+                                size: "w-8 h-8",
+                              }),
+                              /*#__PURE__*/ React.createElement(
+                                "span",
+                                {
+                                  className:
+                                    "text-[10px] font-semibold leading-tight text-slate-700 dark:text-slate-300 truncate w-full",
+                                },
+                                m.name,
+                              ),
+                            );
+                          }),
+                        ),
+                      );
+                    },
                   ),
                   /*#__PURE__*/ React.createElement(
                     "div",
                     {
-                      className: "grid grid-cols-10 gap-2",
+                      className: "mb-2",
                     },
-                    AGENTS.map((a) => {
-                      const isOff = disabledItems.has(a.id);
-                      const mx = Math.max(a.fire, a.earth, a.air, a.water);
-                      const elBorder =
-                        mx > 0
-                          ? a.fire === mx
-                            ? "border-red-300 dark:border-red-700"
-                            : a.earth === mx
-                              ? "border-green-300 dark:border-green-700"
-                              : a.air === mx
-                                ? "border-yellow-300 dark:border-yellow-700"
-                                : "border-blue-300 dark:border-blue-700"
-                          : "border-slate-200 dark:border-slate-700";
-                      return /*#__PURE__*/ React.createElement(
-                        "button",
+                    /*#__PURE__*/ React.createElement(
+                      "h3",
+                      {
+                        className:
+                          "text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2",
+                      },
+                      /*#__PURE__*/ React.createElement("i", {
+                        className: "fa-solid fa-flask-vial text-slate-400",
+                      }),
+                      t("agentLabel"),
+                      /*#__PURE__*/ React.createElement(
+                        "span",
                         {
-                          key: a.id,
-                          onClick: () => toggleDisabledItem(a.id),
-                          title: a.name,
-                          className: `flex flex-col items-center gap-1 p-2 rounded-xl border-2 text-center transition-all ${isOff ? "opacity-30 grayscale border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900" : `${elBorder} bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500`}`,
+                          className:
+                            "text-slate-400 dark:text-slate-600 font-medium normal-case tracking-normal",
                         },
-                        /*#__PURE__*/ React.createElement(ItemIcon, {
-                          id: a.id,
-                          name: a.name,
-                          size: "w-8 h-8",
-                        }),
-                        /*#__PURE__*/ React.createElement(
-                          "span",
+                        AGENTS.filter((a) => !disabledItems.has(a.id)).length,
+                        "/",
+                        AGENTS.length,
+                      ),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      {
+                        className: "grid grid-cols-10 gap-2",
+                      },
+                      AGENTS.map((a) => {
+                        const isOff = disabledItems.has(a.id);
+                        const mx = Math.max(a.fire, a.earth, a.air, a.water);
+                        const elBorder =
+                          mx > 0
+                            ? a.fire === mx
+                              ? "border-red-300 dark:border-red-700"
+                              : a.earth === mx
+                                ? "border-green-300 dark:border-green-700"
+                                : a.air === mx
+                                  ? "border-yellow-300 dark:border-yellow-700"
+                                  : "border-blue-300 dark:border-blue-700"
+                            : "border-slate-200 dark:border-slate-700";
+                        return /*#__PURE__*/ React.createElement(
+                          "button",
                           {
-                            className:
-                              "text-[10px] font-semibold leading-tight text-slate-700 dark:text-slate-300 truncate w-full",
+                            key: a.id,
+                            onClick: () => toggleDisabledItem(a.id),
+                            title: a.name,
+                            className: `flex flex-col items-center gap-1 p-2 rounded-xl border-2 text-center transition-all ${isOff ? "opacity-30 grayscale border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900" : `${elBorder} bg-white dark:bg-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500`}`,
                           },
-                          a.name,
-                        ),
-                      );
-                    }),
+                          /*#__PURE__*/ React.createElement(ItemIcon, {
+                            id: a.id,
+                            name: a.name,
+                            size: "w-8 h-8",
+                          }),
+                          /*#__PURE__*/ React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-[10px] font-semibold leading-tight text-slate-700 dark:text-slate-300 truncate w-full",
+                            },
+                            a.name,
+                          ),
+                        );
+                      }),
+                    ),
                   ),
                 ),
               ),
