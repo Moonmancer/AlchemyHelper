@@ -2613,8 +2613,13 @@ function App() {
         if (secret.agent !== undefined && selectedAgent?.name !== secret.agent)
           return false;
         if (
-          secret.minElement &&
-          dominantElement.toLowerCase() !== secret.minElement.toLowerCase()
+          secret.element &&
+          dominantElement.toLowerCase() !== secret.element.toLowerCase()
+        )
+          return false;
+        if (
+          secret.minScore > 0 &&
+          stats[secret.element.toLowerCase()] < secret.minScore
         )
           return false;
         if (stats.quality < (secret.minQuality || 0)) return false;
@@ -2649,7 +2654,8 @@ function App() {
         (currentMatchedSecret
           ? {
               product: currentMatchedSecret.name,
-              element: currentMatchedSecret.minElement || "None",
+              element: currentMatchedSecret.element || "None",
+              minScore: currentMatchedSecret.minScore || 0,
               minQuality: currentMatchedSecret.minQuality || 0,
               id: currentMatchedSecret.id,
               rank: "Secret",
@@ -2686,8 +2692,13 @@ function App() {
       if (secret.agent !== undefined && selectedAgent?.name !== secret.agent)
         return false;
       if (
-        secret.minElement &&
-        dominantElement.toLowerCase() !== secret.minElement.toLowerCase()
+        secret.element &&
+        dominantElement.toLowerCase() !== secret.element.toLowerCase()
+      )
+        return false;
+      if (
+        secret.minScore > 0 &&
+        stats[secret.element.toLowerCase()] < secret.minScore
       )
         return false;
       if (stats.quality < (secret.minQuality || 0)) return false;

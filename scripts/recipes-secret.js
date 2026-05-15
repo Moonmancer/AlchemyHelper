@@ -7,8 +7,9 @@
 //                    Reihenfolge muss exakt übereinstimmen.
 //   mainIngredient - Material-ID (integer) in Slot 0 (Hauptzutat)
 //   agent          - Agenten-Name (string, exakter Vergleich); undefined = egal
-//   minElement     - Dominantes Element z. B. "Fire" | "Earth" | "Air" | "Water" | "None"
+//   element        - Dominantes Element z. B. "Fire" | "Earth" | "Air" | "Water" | "None"
 //                    Case-insensitiver Vergleich.
+//   minScore       - Minimaler Element-Score (integer); 0 = kein Schwellwert
 //   minQuality     - Angezeigte Qualität (inkl. Agent-Bonus) muss >= diesem Wert sein
 //   potionBase     - Potion-Base-ID (integer); Basic=645 | Intermediate=656 | Advanced=657 | Special=610
 //   catalyst       - Katalysator-Name-String (exakter Vergleich); "none" für keinen Katalysator
@@ -21,7 +22,8 @@ window.SECRET_RECIPES = [
     mainIngredient: 40022,
     agent: "Crimson Maxima",
     potionBase: 610,
-    minElement: "Fire",
+    element: "Fire",
+    minScore: 0,
     minQuality: 100,
     catalyst: "Garm's Essence",
     extraItemIds: [40129],
@@ -31,7 +33,8 @@ window.SECRET_RECIPES = [
     name: "Request Note",
     ingredients: ["Wood", "Beast", "Sand", "Magic"],
     potionBase: 645,
-    minElement: "Air",
+    element: "Air",
+    minScore: 0,
     minQuality: 0,
     catalyst: "Blue Gemstone",
   },
