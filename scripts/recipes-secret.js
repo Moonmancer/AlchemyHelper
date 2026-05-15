@@ -1,20 +1,24 @@
-// Secret-Rezepte: Werden erkannt, wenn ein Custom-Rezept beim Speichern mit diesen
-// Kriterien übereinstimmt. Alle gefundenen Secrets werden in localStorage gespeichert.
+// Secret-Rezepte: Werden erkannt, wenn der Kessel im Custom-Modus die passenden
+// Kriterien erfüllt (Real-time, kein Speichern nötig).
 // Felder:
-//   id           - eindeutige ID (string)
-//   name         - Rezeptname; case-insensitiver Vergleich mit Custom-Rezept-Name (string)
-//   ingredients  - Array[4] von Zutatentypen z. B. ["Food", "Wood", "Sand", "Magic"]
-//                  Reihenfolge muss exakt übereinstimmen.
-//   minElement   - Dominantes Element z. B. "Fire" | "Earth" | "Air" | "Water" | "None"
-//                  Case-insensitiver Vergleich.
-//   minQuality   - Durchschnittsqualität der gespeicherten Zutaten muss >= diesem Wert sein
-//   catalyst     - Katalysator-Name-String (exakter Vergleich); "none" für keinen Katalysator
-//   extraItemIds - Array von IDs aus extra-items.js, die dieses Secret freischaltet
+//   id             - eindeutige ID (string)
+//   name           - Anzeigename für Toast (string, wird NICHT für Matching verwendet)
+//   ingredients    - Array[4] von Zutatentypen z. B. ["Food", "Wood", "Sand", "Magic"]
+//                    Reihenfolge muss exakt übereinstimmen.
+//   mainIngredient - Material-ID (integer) in Slot 0 (Hauptzutat)
+//   agent          - Agenten-Name (string, exakter Vergleich); undefined = egal
+//   minElement     - Dominantes Element z. B. "Fire" | "Earth" | "Air" | "Water" | "None"
+//                    Case-insensitiver Vergleich.
+//   minQuality     - Angezeigte Qualität (inkl. Agent-Bonus) muss >= diesem Wert sein
+//   catalyst       - Katalysator-Name-String (exakter Vergleich); "none" für keinen Katalysator
+//   extraItemIds   - Array von IDs aus extra-items.js, die dieses Secret freischaltet
 window.SECRET_RECIPES = [
   {
     id: "secret_caelum",
     name: "Caelum",
     ingredients: ["Magic", "Magic", "Magic", "Magic"],
+    mainIngredient: 40022,
+    agent: "Crimson Maxima",
     minElement: "Fire",
     minQuality: 100,
     catalyst: "Garm's Essence",

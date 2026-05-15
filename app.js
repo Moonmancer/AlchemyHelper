@@ -2286,54 +2286,6 @@ function App() {
     writeCustomRecipes(updated);
     setSaveModalOpen(false);
     setSaveRecipeName("");
-    // Secret-Rezept-Matching
-    if (
-      typeof window.SECRET_RECIPES !== "undefined" &&
-      window.SECRET_RECIPES.length > 0
-    ) {
-      const avgQuality = stats.quality;
-      const newlyFound = window.SECRET_RECIPES.filter((secret) => {
-        if (foundSecrets.includes(secret.id)) return false;
-        if (
-          recipeData.product.trim().toLowerCase() !== secret.name.toLowerCase()
-        )
-          return false;
-        if (
-          !secret.ingredients.every(
-            (type, i) => recipeData.ingredients[i] === type,
-          )
-        )
-          return false;
-        if (
-          secret.minElement &&
-          recipeData.element.toLowerCase() !== secret.minElement.toLowerCase()
-        )
-          return false;
-        if (avgQuality < (secret.minQuality || 0)) return false;
-        if (
-          secret.catalyst !== undefined &&
-          recipeData.catalyst !== secret.catalyst
-        )
-          return false;
-        return true;
-      });
-      if (newlyFound.length > 0) {
-        const newFoundIds = [...foundSecrets, ...newlyFound.map((s) => s.id)];
-        setFoundSecrets(newFoundIds);
-        try {
-          localStorage.setItem(
-            "alchemyFoundSecrets",
-            JSON.stringify(newFoundIds),
-          );
-        } catch {}
-        setSecretFoundToast(newlyFound[0].name);
-        clearTimeout(secretFoundToastTimer.current);
-        secretFoundToastTimer.current = setTimeout(
-          () => setSecretFoundToast(null),
-          5000,
-        );
-      }
-    }
     const wasNew = !activeCustomRecipeId;
     if (wasNew) {
       // War ein neues Rezept → Felder leeren für das nächste
@@ -2647,6 +2599,57 @@ function App() {
       stats[elKey] >= effectiveRecipe.minScore;
     return isCorrectElement && isSufficientQuality && isSufficientScore;
   }, [effectiveRecipe, dominantElement, stats]);
+  // Real-time Secret-Rezept-Matching
+  React.useEffect(() => {
+    if (
+      !isCustomMode ||
+      typeof window.SECRET_RECIPES === "undefined" ||
+      window.SECRET_RECIPES.length === 0
+    )
+      return;
+    const newlyFound = window.SECRET_RECIPES.filter((secret) => {
+      if (foundSecrets.includes(secret.id)) return false;
+      if (!secret.ingredients.every((type, i) => customSlotTypes[i] === type))
+        return false;
+      if (
+        secret.mainIngredient !== undefined &&
+        cauldron[0]?.id !== secret.mainIngredient
+      )
+        return false;
+      if (secret.agent !== undefined && selectedAgent?.name !== secret.agent)
+        return false;
+      if (
+        secret.minElement &&
+        dominantElement.toLowerCase() !== secret.minElement.toLowerCase()
+      )
+        return false;
+      if (stats.quality < (secret.minQuality || 0)) return false;
+      if (secret.catalyst !== undefined && catalyst.name !== secret.catalyst)
+        return false;
+      return true;
+    });
+    if (newlyFound.length === 0) return;
+    const newFoundIds = [...foundSecrets, ...newlyFound.map((s) => s.id)];
+    setFoundSecrets(newFoundIds);
+    try {
+      localStorage.setItem("alchemyFoundSecrets", JSON.stringify(newFoundIds));
+    } catch {}
+    setSecretFoundToast(newlyFound[0].name);
+    clearTimeout(secretFoundToastTimer.current);
+    secretFoundToastTimer.current = setTimeout(
+      () => setSecretFoundToast(null),
+      5000,
+    );
+  }, [
+    isCustomMode,
+    cauldron,
+    customSlotTypes,
+    catalyst,
+    selectedAgent,
+    stats,
+    dominantElement,
+    foundSecrets,
+  ]);
   const lagerWarnings = useMemo(() => {
     const missing = [];
     const low = [];
