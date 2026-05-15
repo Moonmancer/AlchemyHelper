@@ -4,7 +4,9 @@
   "description": "",
   "main": "tesseract.min.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:ocr": "playwright test tests/ocr.spec.js",
+    "test:settings": "playwright test tests/settings-transfer.spec.js"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,7 @@
     "@babel/helper-plugin-utils": "^7.28.6",
     "@babel/preset-react": "^7.28.5",
     "@babel/types": "^7.29.0",
+    "@playwright/test": "^1.60.0",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
     "prettier": "^3.8.3",
