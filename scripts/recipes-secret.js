@@ -18,6 +18,6 @@ window.SECRET_RECIPES = [
     minElement: "Fire",
     minQuality: 100,
     catalyst: "Garm's Essence",
-    extraItemIds: ["40129"],
+    extraItemIds: [40129],
   },
 ];
