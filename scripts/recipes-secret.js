@@ -51,4 +51,16 @@ window.SECRET_RECIPES = [
     catalyst: "Garm's Essence",
     extraItemIds: [730],
   },
+  {
+    id: 40123,
+    name: "Special Nutrient",
+    ingredients: ["Beast", "Food", "Sand", "Wood"],
+    mainIngredient: 40015,
+    potionBase: 656,
+    element: "Water",
+    minScore: 270,
+    minQuality: 40,
+    catalyst: "Cyfar",
+    extraItemIds: [30414],
+  },
 ];
