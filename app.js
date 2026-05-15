@@ -12093,7 +12093,8 @@ function App() {
                       );
                     }),
                   ),
-                  Object.keys(parsedLager).length > 0 &&
+                  !isCustomMode &&
+                    Object.keys(parsedLager).length > 0 &&
                     (lagerWarnings.missing.length > 0 ||
                       lagerWarnings.low.length > 0) &&
                     /*#__PURE__*/ React.createElement(
