@@ -26,4 +26,13 @@ window.SECRET_RECIPES = [
     catalyst: "Garm's Essence",
     extraItemIds: [40129],
   },
+  {
+    id: 40121,
+    name: "Request Note",
+    ingredients: ["Wood", "Beast", "Sand", "Magic"],
+    potionBase: 645,
+    minElement: "Air",
+    minQuality: 0,
+    catalyst: "Blue Gemstone",
+  },
 ];
