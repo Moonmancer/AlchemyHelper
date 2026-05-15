@@ -7615,7 +7615,10 @@ function App() {
                                   .filter(({ entry }) => !entry.parentId);
                                 const getAllMats = (entryId) => {
                                   const combined = {};
+                                  const visited = new Set();
                                   const visit = (id) => {
+                                    if (visited.has(id)) return;
+                                    visited.add(id);
                                     const slotIdx = sessionRecipes.findIndex(
                                       (r) => r._id === id,
                                     );
