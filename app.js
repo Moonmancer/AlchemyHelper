@@ -2626,6 +2626,15 @@ function App() {
       if (stats.quality < (secret.minQuality || 0)) return false;
       if (secret.catalyst !== undefined && catalyst.name !== secret.catalyst)
         return false;
+      if (secret.potionBase !== undefined) {
+        const rankToPbId = {
+          Basic: 645,
+          Intermediate: 656,
+          Advanced: 657,
+          Special: 610,
+        };
+        if (rankToPbId[customRank] !== secret.potionBase) return false;
+      }
       return true;
     });
     if (newlyFound.length === 0) return;
@@ -2649,6 +2658,7 @@ function App() {
     stats,
     dominantElement,
     foundSecrets,
+    customRank,
   ]);
   const lagerWarnings = useMemo(() => {
     const missing = [];
