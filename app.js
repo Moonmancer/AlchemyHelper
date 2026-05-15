@@ -12254,7 +12254,9 @@ function App() {
                           {
                             className: `text-lg font-black ${stats.quality > 0 ? (selectedRecipe && stats.quality < selectedRecipe.minQuality ? "text-red-500" : "text-indigo-600 dark:text-indigo-400") : "text-slate-400"}`,
                           },
-                          stats.quality > 0 ? stats.quality : "-",
+                          stats.quality > 0
+                            ? Math.min(stats.quality, 100)
+                            : "-",
                         ),
                         selectedRecipe &&
                           /*#__PURE__*/ React.createElement(
