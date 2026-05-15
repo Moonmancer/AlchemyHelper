@@ -63,4 +63,15 @@ window.SECRET_RECIPES = [
     catalyst: "Cyfar",
     extraItemIds: [30414],
   },
+  {
+    id: 40364,
+    name: "Tome of Distance Farm",
+    ingredients: ["Beast", "Magic", "Wood", "Wood"],
+    potionBase: 656,
+    element: "Air",
+    minScore: 0,
+    minQuality: 50,
+    catalyst: "Cyfar",
+    extraItemIds: [40363],
+  },
 ];

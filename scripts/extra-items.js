@@ -7,4 +7,5 @@ window.EXTRA_ITEMS = [
   { id: 40129, name: "Harvested Soul", type: "Extra" },
   { id: 730, name: "1 Carat Diamond", type: "Extra" },
   { id: 30414, name: "Timeless Eel", type: "Extra" },
+  { id: 40363, name: "Iroh's Club", type: "Extra" },
 ];
