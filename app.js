@@ -4414,6 +4414,7 @@ function App() {
                         ["none", t("splitModeNone")],
                         ["stock", t("splitModeStock")],
                         ["type", t("splitModeType")],
+                        ["recipe", t("splitModeRecipe")],
                       ].map(([mode, label]) =>
                         /*#__PURE__*/ React.createElement(
                           "button",
@@ -7068,6 +7069,7 @@ function App() {
                               ["none", t("splitModeNone")],
                               ["stock", t("splitModeStock")],
                               ["type", t("splitModeType")],
+                              ["recipe", t("splitModeRecipe")],
                             ].map(([mode, label]) =>
                               /*#__PURE__*/ React.createElement(
                                 "button",
@@ -7290,6 +7292,90 @@ function App() {
                                     craftingEntries.map(renderCraftingEntry),
                                   ),
                                 );
+                              if (matSplitMode === "recipe") {
+                                const allRecs = [...RECIPES, ...customRecipes];
+                                const rootSlots = sessionRecipes
+                                  .map((entry, idx) => ({ entry, idx }))
+                                  .filter(({ entry }) => !entry.parentId);
+                                const getAllMats = (entryId) => {
+                                  const combined = {};
+                                  const visit = (id) => {
+                                    const slotIdx = sessionRecipes.findIndex(
+                                      (r) => r._id === id,
+                                    );
+                                    if (slotIdx === -1) return;
+                                    const mats =
+                                      sessionPerRecipeMaterials[slotIdx] || {};
+                                    Object.entries(mats).forEach(
+                                      ([matId, count]) => {
+                                        const numId = parseInt(matId);
+                                        if (!craftingProductIds.has(numId)) {
+                                          combined[numId] =
+                                            (combined[numId] || 0) + count;
+                                        }
+                                      },
+                                    );
+                                    sessionRecipes
+                                      .filter(
+                                        (r) =>
+                                          r.parentId ===
+                                          sessionRecipes[slotIdx]._id,
+                                      )
+                                      .forEach((child) => visit(child._id));
+                                  };
+                                  visit(entryId);
+                                  return combined;
+                                };
+                                return /*#__PURE__*/ React.createElement(
+                                  "div",
+                                  { className: "space-y-3" },
+                                  rootSlots.map(({ entry }) => {
+                                    const recipe = allRecs.find(
+                                      (r) => r.id === entry.recipeId,
+                                    );
+                                    if (!recipe) return null;
+                                    const productId =
+                                      recipe.matchedRecipeId ?? recipe.id;
+                                    const mats = Object.entries(
+                                      getAllMats(entry._id),
+                                    ).sort(
+                                      ([a], [b]) => parseInt(a) - parseInt(b),
+                                    );
+                                    if (mats.length === 0) return null;
+                                    return /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      { key: entry._id },
+                                      /*#__PURE__*/ React.createElement(
+                                        "div",
+                                        {
+                                          className:
+                                            "flex items-center gap-1.5 mb-1.5",
+                                        },
+                                        /*#__PURE__*/ React.createElement(
+                                          ItemIcon,
+                                          {
+                                            id: productId,
+                                            name: recipe.product,
+                                            size: "w-4 h-4 flex-shrink-0",
+                                          },
+                                        ),
+                                        /*#__PURE__*/ React.createElement(
+                                          "p",
+                                          {
+                                            className: `text-[10px] font-black uppercase tracking-wider ${{ Fire: "text-red-500 dark:text-red-400", Earth: "text-green-600 dark:text-green-400", Air: "text-yellow-500 dark:text-yellow-400", Water: "text-blue-500 dark:text-blue-400" }[recipe.element] ?? "text-slate-600 dark:text-slate-300"}`,
+                                          },
+                                          recipe.product,
+                                        ),
+                                      ),
+                                      /*#__PURE__*/ React.createElement(
+                                        "div",
+                                        { className: "space-y-1.5 pl-1" },
+                                        mats.map(renderEntry),
+                                      ),
+                                    );
+                                  }),
+                                );
+                              }
                               if (
                                 matSplitMode === "none" ||
                                 (matSplitMode === "stock" && noLager2)
@@ -11130,6 +11216,7 @@ function App() {
                         };
                         if (
                           matSplitMode === "none" ||
+                          matSplitMode === "recipe" ||
                           (matSplitMode === "stock" && noLager)
                         ) {
                           return /*#__PURE__*/ React.createElement(

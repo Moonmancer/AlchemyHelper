@@ -1,4 +1,4 @@
-window.UI_T = {
+﻿window.UI_T = {
   de: {
     appTitle: "Alchemisten-Lexikon",
     sessionStart: "Session Starten",
@@ -169,7 +169,7 @@ window.UI_T = {
       "Wirklich alle gespeicherten Zutaten-Einstellungen löschen?",
     focusModeLabel: "Fokus-Modus",
     focusModeHint:
-      "Zeigt beim Zutaten anpassen nur ein Rezept mit seinen Sub-Crafts. Weiter-Button wechselt zum nächsten Rezept."
+      "Zeigt beim Zutaten anpassen nur ein Rezept mit seinen Sub-Crafts. Weiter-Button wechselt zum nächsten Rezept.",
     focusModeNext: "N\u00e4chstes Rezept",
     splitByStockLabel: "Materialliste aufteilen",
     splitByStockHint:
@@ -177,6 +177,7 @@ window.UI_T = {
     splitModeNone: "Keine",
     splitModeStock: "Lager",
     splitModeType: "Typ",
+    splitModeRecipe: "Rezept",
     stockAvailable: "Vorhanden",
     stockMissing: "Fehlt noch",
     stockCrafting: "Crafting",
@@ -372,6 +373,7 @@ window.UI_T = {
     splitModeNone: "None",
     splitModeStock: "Stock",
     splitModeType: "Type",
+    splitModeRecipe: "Recipe",
     stockAvailable: "Available",
     stockMissing: "Missing",
     stockCrafting: "Crafting",
