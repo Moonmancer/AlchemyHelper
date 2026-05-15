@@ -371,7 +371,14 @@ const ItemIcon = ({ id, name, size = "w-8 h-8", className = "" }) => {
       "div",
       {
         className: `${size} ${className} bg-slate-200 dark:bg-slate-700/50 rounded-md flex items-center justify-center text-[10px] font-bold text-slate-400 dark:text-slate-500`,
-        title: "Kein Icon verf\u00FCgbar",
+        title: (() => {
+          const m = document.cookie.match(/(?:^|; )lang=([^;]*)/);
+          const l = m ? m[1] : "de";
+          return (
+            (window.UI_T?.[l] || window.UI_T?.de)?.noIcon ??
+            "Kein Icon verf\u00FCgbar"
+          );
+        })(),
       },
       "?",
     );
