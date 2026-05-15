@@ -38,4 +38,17 @@ window.SECRET_RECIPES = [
     minQuality: 0,
     catalyst: "Blue Gemstone",
   },
+  {
+    id: 7136,
+    name: "Acid Bottle",
+    ingredients: ["Alloy", "Wood", "Beast", "Sand"],
+    mainIngredient: 40018,
+    agent: "Mana Maxima",
+    potionBase: 657,
+    element: "Water",
+    minScore: 250,
+    minQuality: 82,
+    catalyst: "Garm's Essence",
+    extraItemIds: [730],
+  },
 ];
