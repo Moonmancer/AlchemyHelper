@@ -632,6 +632,24 @@ function App() {
     });
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const showConfirm = React.useCallback(
+    (message) =>
+      new Promise((resolve) => {
+        setConfirmModal({
+          message,
+          onConfirm: () => {
+            setConfirmModal(null);
+            resolve(true);
+          },
+          onCancel: () => {
+            setConfirmModal(null);
+            resolve(false);
+          },
+        });
+      }),
+    [],
+  );
   const [stockAlertOpen, setStockAlertOpen] = useState(false);
   const [stockAlertSort, setStockAlertSort] = useState("alpha");
   const [lowStockThreshold, setLowStockThreshold] = useState(() => {
@@ -891,6 +909,13 @@ function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+  const handleNukeData = async () => {
+    if (!(await showConfirm(t("nukeConfirm")))) return;
+    localStorage.clear();
+    document.cookie = "lang=; path=/; max-age=0";
+    document.cookie = "darkMode=; path=/; max-age=0";
+    window.location.reload();
+  };
   const handleImportSettings = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -899,7 +924,7 @@ function App() {
       const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
           const data = JSON.parse(ev.target.result);
           if (typeof data !== "object" || Array.isArray(data))
@@ -907,7 +932,7 @@ function App() {
           const keys = Object.keys(data);
           if (!keys.every((k) => k.startsWith("alchemy")))
             throw new Error("invalid");
-          if (!window.confirm(t("importConfirm"))) return;
+          if (!(await showConfirm(t("importConfirm")))) return;
           keys.forEach((k) => {
             try {
               localStorage.setItem(k, data[k]);
@@ -2635,9 +2660,9 @@ function App() {
     setCartOpen(false);
     setErrorMsg("");
   };
-  const handleDeleteCustomRecipe = (id, e) => {
+  const handleDeleteCustomRecipe = async (id, e) => {
     e.stopPropagation();
-    if (!window.confirm(t("deleteRecipeConfirm"))) return;
+    if (!(await showConfirm(t("deleteRecipeConfirm")))) return;
     const updated = customRecipes.filter((r) => r.id !== id);
     setCustomRecipes(updated);
     writeCustomRecipes(updated);
@@ -4625,6 +4650,68 @@ function App() {
             "\xBB",
           ),
         ),
+        confirmModal &&
+          /*#__PURE__*/ React.createElement(
+          "div",
+          {
+            className:
+              "fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4",
+            onClick: confirmModal.onCancel,
+          },
+            /*#__PURE__*/ React.createElement(
+            "div",
+            {
+              className:
+                "bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm p-6 flex flex-col gap-5",
+              onClick: (e) => e.stopPropagation(),
+            },
+              /*#__PURE__*/ React.createElement(
+              "div",
+              { className: "flex items-start gap-3" },
+                /*#__PURE__*/ React.createElement(
+                "div",
+                {
+                  className:
+                    "w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0",
+                },
+                  /*#__PURE__*/ React.createElement("i", {
+                  className:
+                    "fa-solid fa-triangle-exclamation text-red-500 dark:text-red-400",
+                }),
+              ),
+                /*#__PURE__*/ React.createElement(
+                "p",
+                {
+                  className:
+                    "text-sm text-slate-700 dark:text-slate-200 leading-relaxed pt-1",
+                },
+                confirmModal.message,
+              ),
+            ),
+              /*#__PURE__*/ React.createElement(
+              "div",
+              { className: "flex gap-3 justify-end" },
+                /*#__PURE__*/ React.createElement(
+                "button",
+                {
+                  onClick: confirmModal.onCancel,
+                  className:
+                    "px-4 py-2 text-sm font-bold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors",
+                },
+                t("cancel"),
+              ),
+                /*#__PURE__*/ React.createElement(
+                "button",
+                {
+                  onClick: confirmModal.onConfirm,
+                  className:
+                    "px-4 py-2 text-sm font-bold rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors",
+                },
+                t("confirmOk"),
+              ),
+            ),
+          ),
+        ),
         settingsOpen &&
           /*#__PURE__*/ React.createElement(
           "div",
@@ -4870,9 +4957,11 @@ function App() {
                     /*#__PURE__*/ React.createElement(
                     "button",
                     {
-                      onClick: () => {
+                      onClick: async () => {
                         if (
-                          window.confirm(t("rememberIngredientsResetConfirm"))
+                          await showConfirm(
+                            t("rememberIngredientsResetConfirm"),
+                          )
                         ) {
                           clearAllRecipeIngredientsPersist();
                         }
@@ -5097,6 +5186,19 @@ function App() {
                     }),
                     " ",
                     t("importLabel"),
+                  ),
+                    /*#__PURE__*/ React.createElement(
+                    "button",
+                    {
+                      onClick: handleNukeData,
+                      className:
+                        "flex items-center gap-2 px-4 py-2 text-sm font-bold bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors ml-auto",
+                    },
+                      /*#__PURE__*/ React.createElement("i", {
+                      className: "fa-solid fa-trash",
+                    }),
+                    " ",
+                    t("nukeLabel"),
                   ),
                 ),
               ),
@@ -5376,13 +5478,13 @@ function App() {
                     /*#__PURE__*/ React.createElement(
                     "button",
                     {
-                      onClick: () => {
+                      onClick: async () => {
                         if (
-                          !window.confirm(
+                          !(await showConfirm(
                             lang === "de"
                               ? "Session wirklich verwerfen?"
                               : "Really discard session?",
-                          )
+                          ))
                         )
                           return;
                         try {

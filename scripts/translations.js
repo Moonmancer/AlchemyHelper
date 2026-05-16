@@ -2,6 +2,8 @@
   de: {
     appTitle: "Alchemisten-Lexikon",
     appSubtitle: "Helfer-Tool für das Alchemie-Minigame auf Arcadia-Online",
+    cancel: "Abbrechen",
+    confirmOk: "Bestätigen",
     sessionStart: "Session Starten",
     sessionContinue: "Session fortführen",
     sessionDiscard: "Session verwerfen",
@@ -204,6 +206,8 @@
       "Exportiere alle Einstellungen als JSON-Datei und importiere sie auf einem anderen Rechner.",
     exportLabel: "Exportieren",
     importLabel: "Importieren",
+    nukeLabel: "Alle Daten löschen",
+    nukeConfirm: "Wirklich alle gespeicherten Daten unwiderruflich löschen? Das kann nicht rückgängig gemacht werden.",
     importConfirm:
       "Alle aktuellen Einstellungen werden \u00fcberschrieben. Fortfahren?",
     importError: "Ung\u00fcltige Datei \u2014 Import abgebrochen.",
@@ -217,6 +221,8 @@
   en: {
     appTitle: "Alchemist's Lexicon",
     appSubtitle: "Helper tool for the Alchemy minigame on Arcadia-Online",
+    cancel: "Cancel",
+    confirmOk: "Confirm",
     sessionStart: "Start Session",
     sessionContinue: "Continue Session",
     sessionDiscard: "Discard Session",
@@ -419,6 +425,8 @@
       "Export all settings as a JSON file and import them on another device.",
     exportLabel: "Export",
     importLabel: "Import",
+    nukeLabel: "Clear all data",
+    nukeConfirm: "Really delete all saved data? This cannot be undone.",
     importConfirm:
       "All current settings will be overwritten. Continue?",
     importError: "Invalid file \u2014 import aborted.",
