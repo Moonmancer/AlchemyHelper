@@ -6555,7 +6555,7 @@ function App() {
                                               "div",
                                               {
                                                 className:
-                                                  "flex items-center gap-0.5 py-0.5 px-1 rounded bg-slate-100 dark:bg-slate-700/60 text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-auto flex-shrink-0",
+                                                  "absolute top-1 right-1 flex items-center gap-0.5 py-0.5 px-1 rounded bg-slate-100 dark:bg-slate-700/60 text-[10px] font-bold text-slate-500 dark:text-slate-400 z-10",
                                               },
                                               /*#__PURE__*/ React.createElement(
                                                 "i",
