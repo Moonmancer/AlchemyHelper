@@ -1682,11 +1682,23 @@ function App() {
       ...POTION_BASE.map((p) => p.id),
       ...AGENTS.map((a) => a.id),
     ]);
+    // Regex für das Format: "<id> <name> <qty> [None] None <location>"
+    const spaceFormatRe = /^(\d+)\s+.+?\s+([\d,]+)\s+\[None\]/;
     text.split("\n").forEach((line) => {
-      const parts = line.trim().split("\t");
-      if (parts.length < 3) return;
-      const id = parseInt(parts[0]);
-      const amount = parseInt(parts[2].replace(/[.,]/g, "").replace(/\s/g, ""));
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      let id, amount;
+      if (trimmed.includes("\t")) {
+        const parts = trimmed.split("\t");
+        if (parts.length < 3) return;
+        id = parseInt(parts[0]);
+        amount = parseInt(parts[2].replace(/[.,]/g, "").replace(/\s/g, ""));
+      } else {
+        const m = spaceFormatRe.exec(trimmed);
+        if (!m) return;
+        id = parseInt(m[1]);
+        amount = parseInt(m[2].replace(/,/g, ""));
+      }
       if (isNaN(id) || isNaN(amount)) return;
       if (!materialIds.has(id)) return;
       map[id] = (map[id] || 0) + amount;
@@ -10512,15 +10524,19 @@ function App() {
                         className:
                           "text-xs text-slate-400 dark:text-slate-500 mb-2",
                       },
-                      "Format: ",
+                      t("lagerHint").split("{url}")[0],
                       /*#__PURE__*/ React.createElement(
-                        "code",
+                        "a",
                         {
+                          href: "https://cp.arcadia-online.org/masteraccount/items/",
+                          target: "_blank",
+                          rel: "noopener noreferrer",
                           className:
-                            "bg-slate-100 dark:bg-slate-700 px-1 rounded",
+                            "text-indigo-400 hover:text-indigo-300 underline break-all",
                         },
-                        "ID\\tName\\tMenge\\t...",
+                        "cp.arcadia-online.org/masteraccount/items/",
                       ),
+                      t("lagerHint").split("{url}")[1],
                     ),
                     /*#__PURE__*/ React.createElement("textarea", {
                       className:
