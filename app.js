@@ -4117,7 +4117,38 @@ function App() {
                   },
                   className: `px-2.5 py-1.5 text-xs font-black rounded-md transition-all ${lang === "de" ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`,
                 },
-                "\uD83C\uDDE9\uD83C\uDDEA DEU",
+                /*#__PURE__*/ React.createElement(
+                  "svg",
+                  {
+                    width: "18",
+                    height: "12",
+                    viewBox: "0 0 18 12",
+                    style: {
+                      display: "inline-block",
+                      verticalAlign: "middle",
+                      borderRadius: "2px",
+                      marginRight: "4px",
+                    },
+                  },
+                  React.createElement("rect", {
+                    width: "18",
+                    height: "4",
+                    fill: "#000",
+                  }),
+                  React.createElement("rect", {
+                    y: "4",
+                    width: "18",
+                    height: "4",
+                    fill: "#D00",
+                  }),
+                  React.createElement("rect", {
+                    y: "8",
+                    width: "18",
+                    height: "4",
+                    fill: "#FFCE00",
+                  }),
+                ),
+                "DEU",
               ),
               /*#__PURE__*/ React.createElement(
                 "button",
@@ -4128,7 +4159,46 @@ function App() {
                   },
                   className: `px-2.5 py-1.5 text-xs font-black rounded-md transition-all ${lang === "en" ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`,
                 },
-                "\uD83C\uDDEC\uD83C\uDDE7 ENG",
+                /*#__PURE__*/ React.createElement(
+                  "svg",
+                  {
+                    width: "18",
+                    height: "12",
+                    viewBox: "0 0 18 12",
+                    style: {
+                      display: "inline-block",
+                      verticalAlign: "middle",
+                      borderRadius: "2px",
+                      marginRight: "4px",
+                    },
+                  },
+                  React.createElement("rect", {
+                    width: "18",
+                    height: "12",
+                    fill: "#012169",
+                  }),
+                  React.createElement("path", {
+                    d: "M0,0 L18,12 M18,0 L0,12",
+                    stroke: "#fff",
+                    strokeWidth: "3",
+                  }),
+                  React.createElement("path", {
+                    d: "M0,0 L18,12 M18,0 L0,12",
+                    stroke: "#C8102E",
+                    strokeWidth: "1.5",
+                  }),
+                  React.createElement("path", {
+                    d: "M9,0 V12 M0,6 H18",
+                    stroke: "#fff",
+                    strokeWidth: "4.5",
+                  }),
+                  React.createElement("path", {
+                    d: "M9,0 V12 M0,6 H18",
+                    stroke: "#C8102E",
+                    strokeWidth: "2.5",
+                  }),
+                ),
+                "ENG",
               ),
             ),
             /*#__PURE__*/ React.createElement(
