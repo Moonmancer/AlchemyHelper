@@ -3318,7 +3318,7 @@ function App() {
                 ["Fire", "Earth", "Air", "Water"].map((element) => {
                   const elCfg = {
                     Fire: {
-                      label: "Feuer",
+                      label: t("elemFire"),
                       icon: "fa-fire",
                       headerCls: "text-red-500",
                       activeCls:
@@ -3327,7 +3327,7 @@ function App() {
                         "hover:border-red-300 dark:hover:border-red-700",
                     },
                     Earth: {
-                      label: "Erde",
+                      label: t("elemEarth"),
                       icon: "fa-mountain",
                       headerCls: "text-green-600",
                       activeCls:
@@ -3336,7 +3336,7 @@ function App() {
                         "hover:border-green-300 dark:hover:border-green-700",
                     },
                     Air: {
-                      label: "Luft",
+                      label: t("elemAir"),
                       icon: "fa-wind",
                       headerCls: "text-yellow-500",
                       activeCls:
@@ -3345,7 +3345,7 @@ function App() {
                         "hover:border-yellow-300 dark:hover:border-yellow-700",
                     },
                     Water: {
-                      label: "Wasser",
+                      label: t("elemWater"),
                       icon: "fa-droplet",
                       headerCls: "text-blue-500",
                       activeCls:
@@ -3376,8 +3376,6 @@ function App() {
                     groupAgents.map((agent) => {
                       const isActive =
                         selectedAgent && selectedAgent.id === agent.id;
-                      const statKey = agent.element.toLowerCase();
-                      const bonus = agent[statKey];
                       return /*#__PURE__*/ React.createElement(
                         "button",
                         {
@@ -3386,98 +3384,66 @@ function App() {
                             setSelectedAgent(isActive ? null : agent);
                             setAgentModalOpen(false);
                           },
-                          className: `w-full flex items-center justify-between p-4 border rounded-xl transition-all text-left hover:shadow-md gap-4 group
-                                                                        ${isActive ? `${elCfg.activeCls}` : `bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 ${elCfg.hoverCls}`}`,
+                          className: `w-full flex items-center justify-between p-3 border rounded-xl transition-all text-left hover:shadow-md gap-3 mb-1
+                                                                        ${isActive ? elCfg.activeCls : `bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 ${elCfg.hoverCls}`}`,
                         },
                         /*#__PURE__*/ React.createElement(
                           "div",
                           {
-                            className: "flex items-center gap-4",
+                            className: "flex items-center gap-3",
                           },
                           /*#__PURE__*/ React.createElement(ItemIcon, {
                             id: agent.id,
                             name: agent.name,
-                            size: "w-10 h-10",
+                            size: "w-9 h-9 flex-shrink-0",
                           }),
                           /*#__PURE__*/ React.createElement(
                             "div",
-                            {
-                              className: "flex flex-col gap-1",
-                            },
+                            null,
                             /*#__PURE__*/ React.createElement(
-                              "span",
+                              "p",
                               {
                                 className:
-                                  "font-bold text-slate-800 dark:text-slate-200 text-base",
+                                  "font-bold text-sm text-slate-800 dark:text-slate-200",
                               },
                               agent.name,
                             ),
-                            agent.quality > 0 &&
-                              /*#__PURE__*/ React.createElement(
-                                "span",
-                                {
-                                  className:
-                                    "text-xs text-indigo-500 dark:text-indigo-400 font-semibold",
-                                },
-                                "+",
-                                agent.quality,
-                                " ",
-                                t("qualitySuffix"),
-                              ),
                           ),
                         ),
                         /*#__PURE__*/ React.createElement(
                           "div",
                           {
-                            className: "flex gap-2",
+                            className: "flex gap-1.5 flex-shrink-0",
                           },
-                          /*#__PURE__*/ React.createElement(
-                            "div",
-                            {
-                              className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg border min-w-[64px] justify-center text-sm font-bold
-                                                                            ${agent.fire > 0 ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800/50" : "bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-800"}`,
-                            },
-                            /*#__PURE__*/ React.createElement("i", {
-                              className: "fa-solid fa-fire text-base",
-                            }),
-                            " ",
-                            agent.fire,
+                          [
+                            ["fa-fire", "text-red-500", agent.fire],
+                            ["fa-droplet", "text-blue-500", agent.water],
+                            ["fa-wind", "text-yellow-500", agent.air],
+                            ["fa-mountain", "text-green-600", agent.earth],
+                          ].map(([icon, color, val]) =>
+                            /*#__PURE__*/ React.createElement(
+                              "div",
+                              {
+                                key: icon,
+                                className: `flex items-center gap-1 py-1 rounded-lg bg-white/60 dark:bg-slate-700/60 text-xs font-bold w-12 justify-center ${val > 0 ? color : "text-slate-300 dark:text-slate-600"}`,
+                              },
+                              /*#__PURE__*/ React.createElement("i", {
+                                className: `fa-solid ${icon} text-[10px]`,
+                              }),
+                              val,
+                            ),
                           ),
                           /*#__PURE__*/ React.createElement(
                             "div",
                             {
-                              className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg border min-w-[64px] justify-center text-sm font-bold
-                                                                            ${agent.earth > 0 ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-800/50" : "bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-800"}`,
+                              className: `flex items-center gap-1 py-1 rounded-lg border text-xs font-bold w-12 justify-center
+                                                                                    ${agent.quality > 0 ? "bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-500 text-indigo-500 dark:text-indigo-400" : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600"}`,
                             },
                             /*#__PURE__*/ React.createElement("i", {
-                              className: "fa-solid fa-mountain text-base",
+                              className:
+                                "fa-solid fa-wand-magic-sparkles text-[10px]",
                             }),
-                            " ",
-                            agent.earth,
-                          ),
-                          /*#__PURE__*/ React.createElement(
-                            "div",
-                            {
-                              className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg border min-w-[64px] justify-center text-sm font-bold
-                                                                            ${agent.air > 0 ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-100 dark:border-yellow-800/50" : "bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-800"}`,
-                            },
-                            /*#__PURE__*/ React.createElement("i", {
-                              className: "fa-solid fa-wind text-base",
-                            }),
-                            " ",
-                            agent.air,
-                          ),
-                          /*#__PURE__*/ React.createElement(
-                            "div",
-                            {
-                              className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg border min-w-[64px] justify-center text-sm font-bold
-                                                                            ${agent.water > 0 ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800/50" : "bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-800"}`,
-                            },
-                            /*#__PURE__*/ React.createElement("i", {
-                              className: "fa-solid fa-droplet text-base",
-                            }),
-                            " ",
-                            agent.water,
+                            agent.quality,
                           ),
                         ),
                       );
@@ -11131,8 +11097,8 @@ function App() {
                         activeCustomRecipeId
                           ? customRecipes.find(
                               (r) => r.id === activeCustomRecipeId,
-                            )?.product || "Eigenes Rezept"
-                          : "Eigenes Rezept",
+                            )?.product || t("ownRecipe")
+                          : t("ownRecipe"),
                       ),
                       /*#__PURE__*/ React.createElement(
                         "p",
