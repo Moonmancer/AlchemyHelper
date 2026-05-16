@@ -605,7 +605,10 @@ function App() {
   };
   const [lang, setLang] = useState(() => {
     const m = document.cookie.match(/(?:^|; )lang=([^;]*)/);
-    return m ? m[1] : "de";
+    if (m) return m[1];
+    return (navigator.language || "").toLowerCase().startsWith("de")
+      ? "de"
+      : "en";
   });
   const t = (key) => (UI_T[lang] || UI_T.de)[key] ?? key;
   const [disabledItems, setDisabledItems] = useState(() => {
@@ -4098,6 +4101,14 @@ function App() {
                 },
                 t("appTitle"),
               ),
+              /*#__PURE__*/ React.createElement(
+                "p",
+                {
+                  className:
+                    "text-xs text-slate-400 dark:text-slate-500 mt-0.5",
+                },
+                t("appSubtitle"),
+              ),
             ),
           ),
           /*#__PURE__*/ React.createElement(
@@ -4219,26 +4230,6 @@ function App() {
               ),
             ),
             /*#__PURE__*/ React.createElement(
-              "button",
-              {
-                onClick: () => setSettingsOpen(true),
-                className: `p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all w-[54px] flex items-center justify-center relative`,
-                title: t("settingsTitle"),
-              },
-              /*#__PURE__*/ React.createElement("i", {
-                className: "fa-solid fa-gear text-xl",
-              }),
-              disabledItems.size > 0 &&
-                /*#__PURE__*/ React.createElement(
-                "span",
-                {
-                  className:
-                    "absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center",
-                },
-                disabledItems.size,
-              ),
-            ),
-            /*#__PURE__*/ React.createElement(
               "div",
               {
                 className:
@@ -4270,6 +4261,26 @@ function App() {
                         : "fa-solid fa-sun text-sm text-yellow-400",
                 }),
               ),
+              ),
+            ),
+            /*#__PURE__*/ React.createElement(
+              "button",
+              {
+                onClick: () => setSettingsOpen(true),
+                className: `p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all w-[54px] flex items-center justify-center relative`,
+                title: t("settingsTitle"),
+              },
+              /*#__PURE__*/ React.createElement("i", {
+                className: "fa-solid fa-gear text-xl",
+              }),
+              disabledItems.size > 0 &&
+                /*#__PURE__*/ React.createElement(
+                "span",
+                {
+                  className:
+                    "absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center",
+                },
+                disabledItems.size,
               ),
             ),
           ),

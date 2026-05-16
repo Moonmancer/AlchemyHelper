@@ -1,6 +1,7 @@
 ﻿window.UI_T = {
   de: {
     appTitle: "Alchemisten-Lexikon",
+    appSubtitle: "Helfer-Tool für das Alchemie-Minigame auf Arcadia-Online",
     sessionStart: "Session Starten",
     sessionContinue: "Session fortführen",
     sessionDiscard: "Session verwerfen",
@@ -215,6 +216,7 @@
   },
   en: {
     appTitle: "Alchemist's Lexicon",
+    appSubtitle: "Helper tool for the Alchemy minigame on Arcadia-Online",
     sessionStart: "Start Session",
     sessionContinue: "Continue Session",
     sessionDiscard: "Discard Session",
