@@ -1675,41 +1675,55 @@ function App() {
   const [lagerOpen, setLagerOpen] = useState(false);
   const lagerHovered = React.useRef(false);
   const parseLagerText = (text) => {
-    const map = {};
+    const totals = {};
+    const byChar = {};
     const materialIds = new Set([
       ...MATERIALS.map((m) => m.id),
       ...CATALYSTS.filter((c) => c.id !== "none").map((c) => c.id),
       ...POTION_BASE.map((p) => p.id),
       ...AGENTS.map((a) => a.id),
     ]);
-    // Regex für das Format: "<id> <name> <qty> [None] None <location>"
-    const spaceFormatRe = /^(\d+)\s+.+?\s+([\d,]+)\s+\[None\]/;
+    // Extrahiert den Charakter-Namen aus der Quell-Angabe
+    const parseSource = (src) => {
+      if (!src) return "Master Storage";
+      const s = src.trim();
+      if (!s || s === "Master Storage") return "Master Storage";
+      const m = /^Inventory\s+\(([^:)]+):/.exec(s);
+      if (m) return m[1].trim();
+      return s;
+    };
+    // Regex für das Format: "<id> <name> <qty> [None] None <source>"
+    const spaceFormatRe = /^(\d+)\s+.+?\s+([\d,]+)\s+\[None\]\s+\S+\s+(.*)/;
     text.split("\n").forEach((line) => {
       const trimmed = line.trim();
       if (!trimmed) return;
-      let id, amount;
+      let id, amount, source;
       if (trimmed.includes("\t")) {
         const parts = trimmed.split("\t");
         if (parts.length < 3) return;
         id = parseInt(parts[0]);
         amount = parseInt(parts[2].replace(/[.,]/g, "").replace(/\s/g, ""));
+        source = parseSource(parts[5] || "");
       } else {
         const m = spaceFormatRe.exec(trimmed);
         if (!m) return;
         id = parseInt(m[1]);
         amount = parseInt(m[2].replace(/,/g, ""));
+        source = parseSource(m[3]);
       }
       if (isNaN(id) || isNaN(amount)) return;
       if (!materialIds.has(id)) return;
-      map[id] = (map[id] || 0) + amount;
+      totals[id] = (totals[id] || 0) + amount;
+      if (!byChar[source]) byChar[source] = {};
+      byChar[source][id] = (byChar[source][id] || 0) + amount;
     });
-    return map;
+    return { totals, byChar };
   };
   const [parsedLager, setParsedLager] = useState(() => {
     // Immer aus Rohtext parsen, damit neu hinzugefügte Item-Typen (z.B. Agents) erkannt werden
     try {
       const text = localStorage.getItem("alchemyLager") || "";
-      if (text) return parseLagerText(text);
+      if (text) return parseLagerText(text).totals;
     } catch {}
     try {
       const stored = localStorage.getItem("alchemyLagerData");
@@ -1717,17 +1731,32 @@ function App() {
     } catch {}
     return {};
   });
+  const [parsedLagerByChar, setParsedLagerByChar] = useState(() => {
+    try {
+      const text = localStorage.getItem("alchemyLager") || "";
+      if (text) return parseLagerText(text).byChar;
+    } catch {}
+    try {
+      const stored = localStorage.getItem("alchemyLagerByChar");
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
   const saveLager = (text) => {
     setLagerText(text);
-    const map = parseLagerText(text);
-    setParsedLager(map);
+    const { totals, byChar } = parseLagerText(text);
+    setParsedLager(totals);
+    setParsedLagerByChar(byChar);
     try {
       localStorage.setItem("alchemyLager", text);
     } catch {}
     try {
-      localStorage.setItem("alchemyLagerData", JSON.stringify(map));
+      localStorage.setItem("alchemyLagerData", JSON.stringify(totals));
     } catch {}
-    return map;
+    try {
+      localStorage.setItem("alchemyLagerByChar", JSON.stringify(byChar));
+    } catch {}
+    return totals;
   };
   const sessionAllMaterials = React.useMemo(() => {
     const matNeeded = {};
