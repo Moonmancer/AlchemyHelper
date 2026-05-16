@@ -6210,7 +6210,8 @@ function App() {
                                                 {
                                                   className: `text-[10px] font-semibold ${lagerAmt > 0 ? "text-green-600 dark:text-green-400" : "text-red-500"}`,
                                                 },
-                                                "Lager: ",
+                                                t("lagerLabel"),
+                                                " ",
                                                 lagerAmt,
                                               ),
                                           ),
