@@ -1349,14 +1349,24 @@ function App() {
           .filter((w) => w.length >= 4);
         const li = ocrLinesFlat.findIndex((lf, idx) => {
           if (lf.includes(rF)) return true;
-          if (rWords.length < 2) return false;
-          // Word-boundary-aware check: each recipe word must fuzzy-match
-          // a whole word in the OCR line, not a substring of another word.
           const lineWords = ocrLines4[idx]
             .toLowerCase()
             .replace(/[^a-z0-9]/g, " ")
             .split(/\s+/)
             .filter((w) => w.length >= 3);
+          if (rWords.length < 2) {
+            // Single-word recipe: fuzzy-match against whole OCR line words
+            // (catches e.g. "alkabest" → "alkahest" where Strategy 1/2 fail
+            // because the OCR first letter is lowercase)
+            if (rF.length < 6) return false;
+            return lineWords.some(
+              (lw) =>
+                Math.abs(lw.length - rF.length) <= 2 &&
+                levenshtein(rF, lw) <= 2,
+            );
+          }
+          // Word-boundary-aware check: each recipe word must fuzzy-match
+          // a whole word in the OCR line, not a substring of another word.
           return rWords.every((rw) =>
             lineWords.some(
               (lw) =>
