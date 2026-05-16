@@ -1099,6 +1099,8 @@ function App() {
   const [copiedNaviKey, setCopiedNaviKey] = useState(null);
   const [ocrState, setOcrState] = useState(null); // null | 'loading' | 'noimage' | 'error' | {found: N}
   const [ocrAmbiguous, setOcrAmbiguous] = useState(null); // null | { list: [{text, matches}], idx }
+  const [ocrWorkerReady, setOcrWorkerReady] = useState(null); // null=not started | false=loading | true=ready
+  const ocrWorkerRef = React.useRef(null);
   const copyNavi = (npc, key) => {
     const parts = npc.navi.split(" ");
     const cmd = `/navi ${parts[0]} ${parts[1]}/${parts[2]}`;
@@ -1122,6 +1124,49 @@ function App() {
             : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     return dp[a.length][b.length];
   };
+
+  React.useEffect(() => {
+    setOcrWorkerReady(false);
+    const loadWorker = async () => {
+      try {
+        if (!window.Tesseract) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "./tesseract.min.js";
+            s.onload = resolve;
+            s.onerror = () => {
+              const s2 = document.createElement("script");
+              s2.src = "https://unpkg.com/tesseract.js@5/dist/tesseract.min.js";
+              s2.onload = resolve;
+              s2.onerror = reject;
+              document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+          });
+        }
+        const workerAbsPath = new URL("./worker.min.js", document.baseURI).href;
+        const langAbsPath = new URL(".", document.baseURI).href;
+        const coreAbsPath = new URL(".", document.baseURI).href;
+        const worker = await window.Tesseract.createWorker("eng", 1, {
+          workerPath: workerAbsPath,
+          langPath: langAbsPath,
+          corePath: coreAbsPath,
+          cacheMethod: "write",
+        });
+        await worker.setParameters({
+          tessedit_pageseg_mode: "6",
+        });
+        ocrWorkerRef.current = worker;
+        setOcrWorkerReady(true);
+      } catch (e) {
+        console.warn("[OCR preload] failed:", e);
+        ocrWorkerRef.current = null;
+        setOcrWorkerReady(true); // still allow fallback path
+      }
+    };
+    loadWorker();
+  }, []);
+
   const preprocessImageBlob = (blob) =>
     new Promise((resolve) => {
       const img = new Image();
@@ -1162,30 +1207,37 @@ function App() {
     });
   const runOcr = async (blob) => {
     try {
-      if (!window.Tesseract) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement("script");
-          s.src = "./tesseract.min.js";
-          s.onload = resolve;
-          s.onerror = () => {
-            const s2 = document.createElement("script");
-            s2.src = "https://unpkg.com/tesseract.js@5/dist/tesseract.min.js";
-            s2.onload = resolve;
-            s2.onerror = reject;
-            document.head.appendChild(s2);
-          };
-          document.head.appendChild(s);
-        });
-      }
       const processedBlob = await preprocessImageBlob(blob);
-      const workerAbsPath = new URL("./worker.min.js", document.baseURI).href;
-      const {
-        data: { text },
-      } = await window.Tesseract.recognize(processedBlob, "eng", {
-        workerPath: workerAbsPath,
-        tessedit_pageseg_mode: "6",
-        tessedit_ocr_engine_mode: "1",
-      });
+      let text;
+      if (ocrWorkerRef.current) {
+        // Use pre-warmed worker (fast path)
+        const result = await ocrWorkerRef.current.recognize(processedBlob);
+        text = result.data.text;
+      } else {
+        // Fallback: lazy-load and use simple API
+        if (!window.Tesseract) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "./tesseract.min.js";
+            s.onload = resolve;
+            s.onerror = () => {
+              const s2 = document.createElement("script");
+              s2.src = "https://unpkg.com/tesseract.js@5/dist/tesseract.min.js";
+              s2.onload = resolve;
+              s2.onerror = reject;
+              document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+          });
+        }
+        const workerAbsPath = new URL("./worker.min.js", document.baseURI).href;
+        const result = await window.Tesseract.recognize(processedBlob, "eng", {
+          workerPath: workerAbsPath,
+          tessedit_pageseg_mode: "6",
+          tessedit_ocr_engine_mode: "1",
+        });
+        text = result.data.text;
+      }
       console.log("[OCR raw]", text);
       const norm = (s) =>
         s
@@ -5062,10 +5114,17 @@ function App() {
                             onClick: scanScreenshot,
                             disabled:
                               ocrState === "loading" || ocrState === "paste",
-                            className: `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 ml-3 transition-all ${ocrState === "loading" ? "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-wait" : ocrState === "paste" ? "bg-indigo-500 text-white animate-pulse cursor-default" : ocrState === "noimage" || ocrState === "error" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : ocrState?.found > 0 ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : ocrState?.found === 0 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/60"}`,
+                            className: `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 ml-3 transition-all ${ocrState === "loading" ? "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-wait" : ocrState === "paste" ? "bg-indigo-500 text-white animate-pulse cursor-default" : ocrState === "noimage" || ocrState === "error" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : ocrState?.found > 0 ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : ocrState?.found === 0 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : ocrWorkerReady === false ? "bg-slate-100 dark:bg-slate-800 text-slate-400" : "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/60"}`,
                           },
                           /*#__PURE__*/ React.createElement("i", {
-                            className: `fa-solid ${ocrState === "loading" ? "fa-spinner fa-spin" : ocrState === "paste" ? "fa-paste" : ocrState === "noimage" || ocrState === "error" ? "fa-triangle-exclamation" : ocrState?.found > 0 ? "fa-check" : ocrState?.found === 0 ? "fa-magnifying-glass" : "fa-camera"}`,
+                            className: `fa-solid ${ocrState === "loading" ? "fa-spinner fa-spin" : ocrState === "paste" ? "fa-paste" : ocrState === "noimage" || ocrState === "error" ? "fa-triangle-exclamation" : ocrState?.found > 0 ? "fa-check" : ocrState?.found === 0 ? "fa-magnifying-glass" : ocrWorkerReady === false ? "fa-spinner" : "fa-camera"}`,
+                            style:
+                              ocrWorkerReady === false
+                                ? {
+                                    display: "inline-block",
+                                    animation: "fa-spin 2s infinite linear",
+                                  }
+                                : undefined,
                           }),
                           ocrState === "loading"
                             ? t("ocrLoading")
@@ -5082,7 +5141,9 @@ function App() {
                                       )
                                     : ocrState?.found === 0
                                       ? t("ocrNoMatch")
-                                      : t("ocrScan"),
+                                      : ocrWorkerReady === false
+                                        ? t("ocrPreparing")
+                                        : t("ocrScan"),
                         ),
                       ),
                       /*#__PURE__*/ React.createElement(
