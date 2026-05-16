@@ -719,6 +719,22 @@ function App() {
       return next;
     });
   };
+  const [resultAboveKessel, setResultAboveKessel] = useState(() => {
+    try {
+      return localStorage.getItem("alchemyResultAboveKessel") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleResultAboveKessel = () => {
+    setResultAboveKessel((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("alchemyResultAboveKessel", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
   const [focusRootStep, setFocusRootStep] = useState(() => {
     try {
       return (
@@ -833,6 +849,7 @@ function App() {
       "alchemySession",
       "alchemyLager",
       "alchemyLagerData",
+      "alchemyResultAboveKessel",
     ];
     const data = {};
     STATIC_KEYS.forEach((k) => {
@@ -4708,6 +4725,43 @@ function App() {
                       },
                       /*#__PURE__*/ React.createElement("span", {
                         className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${ignoreEmptyItems ? "translate-x-5" : "translate-x-0"}`,
+                      }),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    {
+                      className:
+                        "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4",
+                    },
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      null,
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-sm font-bold text-slate-700 dark:text-slate-200",
+                        },
+                        t("flipCauldronLayoutLabel"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "p",
+                        {
+                          className:
+                            "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
+                        },
+                        t("flipCauldronLayoutHint"),
+                      ),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "button",
+                      {
+                        onClick: toggleResultAboveKessel,
+                        className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${resultAboveKessel ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
+                      },
+                      /*#__PURE__*/ React.createElement("span", {
+                        className: `inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${resultAboveKessel ? "translate-x-5" : "translate-x-0"}`,
                       }),
                     ),
                   ),
@@ -12179,6 +12233,7 @@ function App() {
                 {
                   className:
                     "bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors",
+                  style: { order: resultAboveKessel ? 2 : 1 },
                 },
                 /*#__PURE__*/ React.createElement(
                   "div",
@@ -12944,6 +12999,7 @@ function App() {
                 {
                   className: `rounded-2xl shadow-lg border-2 p-6 transition-all duration-500 relative overflow-hidden flex-shrink-0
                             ${!effectiveRecipe ? "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400" : isEffectiveRecipeValid ? "bg-gradient-to-br from-indigo-600 to-violet-700 border-indigo-400 text-white" : "bg-gradient-to-br from-red-600 to-orange-600 border-red-400 text-white"}`,
+                  style: { order: resultAboveKessel ? 1 : 2 },
                 },
                 /*#__PURE__*/ React.createElement(
                   "div",

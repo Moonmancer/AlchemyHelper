@@ -206,6 +206,9 @@
     ingredientVisibilityLabel: "Zutaten-Filter",
     ingredientVisibilityHint:
       "Deaktivierte Items erscheinen weder im Zutaten-Picker noch bei der automatischen Auswahl.",
+    flipCauldronLayoutLabel: "Kessel-Layout umkehren",
+    flipCauldronLayoutHint:
+      "Zeigt die Ergebnis-Karte über dem Kessel an.",
   },
   en: {
     appTitle: "Alchemist's Lexicon",
@@ -414,5 +417,8 @@
     ingredientVisibilityLabel: "Ingredient Filter",
     ingredientVisibilityHint:
       "Disabled items will not appear in the ingredient picker or automatic selection.",
+    flipCauldronLayoutLabel: "Flip Cauldron Layout",
+    flipCauldronLayoutHint:
+      "Displays the Result card above the Cauldron.",
   },
 };
