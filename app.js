@@ -2576,6 +2576,7 @@ function App() {
   };
   const handleDeleteCustomRecipe = (id, e) => {
     e.stopPropagation();
+    if (!window.confirm(t("deleteRecipeConfirm"))) return;
     const updated = customRecipes.filter((r) => r.id !== id);
     setCustomRecipes(updated);
     writeCustomRecipes(updated);
