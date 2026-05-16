@@ -961,9 +961,9 @@ function App() {
   const [sessionRecipes, setSessionRecipes] = useState(() => {
     const raw = _savedSession?.recipes ?? [];
     return raw.map((r) => ({
-      _id: Math.random().toString(36).slice(2, 10),
       parentId: null,
       ...r,
+      _id: r._id || Math.random().toString(36).slice(2, 10),
     }));
   }); // [{recipeId, savedMaterials:[id|null,...], _id:string, parentId:string|null}]
   const [sessionActiveIdx, setSessionActiveIdx] = useState(
@@ -1486,6 +1486,8 @@ function App() {
           const toAdd = ocrQueue.map((item) => ({
             recipeId: item.recipeId,
             savedMaterials: null,
+            _id: Math.random().toString(36).slice(2, 10),
+            parentId: null,
           }));
           console.log(
             "[OCR no-ambiguous toAdd]",
@@ -2916,6 +2918,8 @@ function App() {
           toAdd.push({
             recipeId: rid,
             savedMaterials: null,
+            _id: Math.random().toString(36).slice(2, 10),
+            parentId: null,
           });
         }
       });
