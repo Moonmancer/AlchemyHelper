@@ -134,6 +134,8 @@
     stockAlertEmpty: "Kein Bestand",
     stockAlertLow: "Knapp",
     stockAlertNone: "Alle Zutaten ausreichend bevorratet.",
+    stockAlertSortAlpha: "Alphabetisch",
+    stockAlertSortId: "Nach ID",
     clickToSwap: "Klicken, um Zutat auszutauschen",
     ingredientSlot: "Zutat",
     noComboError:
@@ -340,6 +342,8 @@
     stockAlertEmpty: "Out of stock",
     stockAlertLow: "Low",
     stockAlertNone: "All ingredients sufficiently stocked.",
+    stockAlertSortAlpha: "Alphabetical",
+    stockAlertSortId: "By ID",
     clickToSwap: "Click to swap ingredient",
     ingredientSlot: "Ingredient",
     noComboError:

@@ -613,6 +613,7 @@ function App() {
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [stockAlertOpen, setStockAlertOpen] = useState(false);
+  const [stockAlertSort, setStockAlertSort] = useState("alpha");
   const [lowStockThreshold, setLowStockThreshold] = useState(() => {
     try {
       return parseInt(
@@ -4138,10 +4139,13 @@ function App() {
                 });
               }
             });
-            knapp.sort((a, b) => a.amount - b.amount);
-            leer.sort((a, b) =>
-              (a.mat?.name || "").localeCompare(b.mat?.name || ""),
-            );
+            const sortFn =
+              stockAlertSort === "id"
+                ? (a, b) => (a.mat?.id ?? 0) - (b.mat?.id ?? 0)
+                : (a, b) =>
+                    (a.mat?.name || "").localeCompare(b.mat?.name || "");
+            knapp.sort(sortFn);
+            leer.sort(sortFn);
             const rows = [
               ...leer.map((x) => ({
                 ...x,
@@ -4203,8 +4207,79 @@ function App() {
                 /*#__PURE__*/ React.createElement(
                   "div",
                   {
+                    className:
+                      "flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0 gap-4",
+                  },
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    null,
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-sm font-bold text-slate-700 dark:text-slate-200",
+                      },
+                      t("lowStockThresholdLabel"),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-xs text-slate-500 dark:text-slate-400 mt-0.5",
+                      },
+                      t("lowStockThresholdHint"),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement("input", {
+                    type: "number",
+                    min: "1",
+                    max: "9999",
+                    value: lowStockThreshold,
+                    onChange: (e) => saveLowStockThreshold(e.target.value),
+                    className:
+                      "w-20 text-center font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors",
+                  }),
+                ),
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  {
                     className: "overflow-y-auto custom-scrollbar p-4 flex-1",
                   },
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    { className: "flex justify-center mb-3" },
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      {
+                        className:
+                          "flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg",
+                      },
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: () => setStockAlertSort("alpha"),
+                          className:
+                            "px-3 py-1 text-xs font-semibold rounded-md transition-colors " +
+                            (stockAlertSort === "alpha"
+                              ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"),
+                        },
+                        t("stockAlertSortAlpha"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: () => setStockAlertSort("id"),
+                          className:
+                            "px-3 py-1 text-xs font-semibold rounded-md transition-colors " +
+                            (stockAlertSort === "id"
+                              ? "bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm"
+                              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"),
+                        },
+                        t("stockAlertSortId"),
+                      ),
+                    ),
+                  ),
                   rows.length === 0
                     ? /*#__PURE__*/ React.createElement(
                         "div",
