@@ -1347,12 +1347,24 @@ function App() {
           .split(" ")
           .map((w) => flat(w))
           .filter((w) => w.length >= 4);
-        const li = ocrLinesFlat.findIndex(
-          (lf) =>
-            lf.includes(rF) ||
-            (rWords.length >= 2 &&
-              rWords.every((rw) => fuzzyWordInLine(rw, lf))),
-        );
+        const li = ocrLinesFlat.findIndex((lf, idx) => {
+          if (lf.includes(rF)) return true;
+          if (rWords.length < 2) return false;
+          // Word-boundary-aware check: each recipe word must fuzzy-match
+          // a whole word in the OCR line, not a substring of another word.
+          const lineWords = ocrLines4[idx]
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, " ")
+            .split(/\s+/)
+            .filter((w) => w.length >= 3);
+          return rWords.every((rw) =>
+            lineWords.some(
+              (lw) =>
+                Math.abs(lw.length - rw.length) <= 1 &&
+                levenshtein(rw, lw) <= 1,
+            ),
+          );
+        });
         if (li !== -1) addCandidate(r.product, false, ocrLineStarts[li]);
       });
 
@@ -1375,6 +1387,7 @@ function App() {
       );
       let found = 0;
       const ocrQueue = []; // ordered: {type:'exact',recipeId} | {type:'ambiguous',text,matches}
+      const resolvedRecipeIds = new Set(); // recipe IDs already committed to ocrQueue
       // We do NOT block duplicates — the user wants them.
       dedupedCandidates.forEach(({ bestText: name, count }) => {
         if (ocrQueue.length >= 5) return;
@@ -1419,13 +1432,29 @@ function App() {
         }
         allMatches.sort((a, b) => a.score - b.score);
 
+        // If the absolute best match is already resolved, this candidate is an OCR
+        // duplicate of that recipe (different strategy, slightly different text) → skip.
+        if (resolvedRecipeIds.has(allMatches[0].recipe.id)) {
+          console.log(
+            `[OCR skip] "${name}" → best match "${allMatches[0].recipe.product}" already resolved`,
+          );
+          return;
+        }
+
         // For ambiguity check: deduplicate by recipeId within this candidate's matches only
+        // and remove recipes that are already committed to the queue.
         const seenIds = new Set();
         const unique = allMatches.filter((m) => {
           if (seenIds.has(m.recipe.id)) return false;
+          if (resolvedRecipeIds.has(m.recipe.id)) return false;
           seenIds.add(m.recipe.id);
           return true;
         });
+
+        if (unique.length === 0) {
+          console.log(`[OCR skip] "${name}" → all matches already resolved`);
+          return;
+        }
 
         // Eindeutig wenn: bester Score 0 (exakt) oder bester Score deutlich besser als der nächste
         const singleExact =
@@ -1447,6 +1476,7 @@ function App() {
               type: "exact",
               recipeId: best.id,
             });
+          resolvedRecipeIds.add(best.id);
           const runner_up = unique[1]
             ? ` (runner-up: "${unique[1].recipe.product}" score=${unique[1].score.toFixed(2)})`
             : " (sole match)";
