@@ -1258,6 +1258,11 @@ function App() {
           textKey: "tutLager2Text",
         },
         {
+          target: "tut-lager-filled",
+          titleKey: "tutLagerFilledTitle",
+          textKey: "tutLagerFilledText",
+        },
+        {
           target: "tut-ingredient-counter",
           titleKey: "tutLager3Title",
           textKey: "tutLager3Text",
@@ -2811,6 +2816,9 @@ function App() {
     if (step.target === "tut-custom-list") {
       setIsCustomMode(false);
     }
+    if (step.target === "tut-lager-filled") {
+      setLagerOpen(false);
+    }
     if (
       step.target === "tut-session-modal" ||
       step.target === "tut-session-ocr-btn" ||
@@ -3568,6 +3576,23 @@ function App() {
         return null;
     }
   };
+  const _tutLagerFilledStep =
+    tutorialState?.steps?.[tutorialState?.step]?.target === "tut-lager-filled";
+  const tutMockLagerPreview =
+    tutorialState !== null &&
+    tutorialState?.steps?.[tutorialState?.step]?.target !==
+      "tut-lager-section" &&
+    tutorialState?.steps?.[tutorialState?.step]?.target !==
+      "tut-lager-edit-btn" &&
+    Object.keys(parsedLager).length === 0
+      ? (() => {
+          const mats = window.MATERIALS || [];
+          const amounts = [340, 12, 87, 6, 23];
+          return Object.fromEntries(
+            mats.slice(0, 5).map((m, i) => [m.id, amounts[i]]),
+          );
+        })()
+      : null;
   const _tutIngredientStep =
     tutorialState?.steps?.[tutorialState?.step]?.target ===
     "tut-ingredient-counter";
@@ -11376,8 +11401,9 @@ function App() {
                     {
                       className:
                         "flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1 min-h-0",
+                      "data-tutorial": "tut-lager-filled",
                     },
-                    Object.keys(parsedLager).length === 0
+                    Object.keys(tutMockLagerPreview || parsedLager).length === 0
                       ? /*#__PURE__*/ React.createElement(
                           "div",
                           {
@@ -11405,7 +11431,7 @@ function App() {
                             t("enterItems"),
                           ),
                         )
-                      : Object.entries(parsedLager)
+                      : Object.entries(tutMockLagerPreview || parsedLager)
                           .sort(([a], [b]) => {
                             const PINNED = [645, 656, 657];
                             const ia = PINNED.indexOf(parseInt(a));
