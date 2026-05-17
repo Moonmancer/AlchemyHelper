@@ -574,9 +574,14 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
       }
     };
     update();
+    // Retry after React re-renders from side-effect state updates (e.g. tab switch)
+    const retry1 = setTimeout(update, 80);
+    const retry2 = setTimeout(update, 250);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
+      clearTimeout(retry1);
+      clearTimeout(retry2);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -2800,11 +2805,11 @@ function App() {
     if (!tutorialState) return;
     const step = tutorialState.steps[tutorialState.step];
     if (!step) return;
-    if (
-      step.target === "tut-custom-form" ||
-      step.target === "tut-custom-list"
-    ) {
+    if (step.target === "tut-custom-form") {
       switchToCustomMode();
+    }
+    if (step.target === "tut-custom-list") {
+      setIsCustomMode(false);
     }
     if (
       step.target === "tut-session-modal" ||
@@ -3563,6 +3568,33 @@ function App() {
         return null;
     }
   };
+  const _tutIngredientStep =
+    tutorialState?.steps?.[tutorialState?.step]?.target ===
+    "tut-ingredient-counter";
+  const tutMockCauldron = _tutIngredientStep
+    ? (() => {
+        const mats = window.MATERIALS || [];
+        return [0, 1, 2, 3].map((i) => (mats[i] ? { ...mats[i] } : null));
+      })()
+    : null;
+  const tutMockCartTotal = tutMockCauldron
+    ? Object.fromEntries(tutMockCauldron.filter(Boolean).map((m) => [m.id, 1]))
+    : null;
+  const tutMockLager = tutMockCauldron
+    ? Object.fromEntries(
+        tutMockCauldron
+          .filter(Boolean)
+          .map((m, i) => [m.id, i % 2 === 0 ? 5 : 0]),
+      )
+    : null;
+  const _tutCustomListStep =
+    tutorialState?.steps?.[tutorialState?.step]?.target === "tut-custom-list";
+  const tutMockCustomRecipe = _tutCustomListStep
+    ? (() => {
+        const r = (window.RECIPES || [])[0];
+        return r ? { ...r, rank: "Custom" } : null;
+      })()
+    : null;
   return /*#__PURE__*/ React.createElement(
     "div",
     {
@@ -11636,14 +11668,21 @@ function App() {
                     {
                       className:
                         "overflow-y-auto pr-2 space-y-3 flex-1 custom-scrollbar min-h-0",
-                      "data-tutorial": "tut-custom-list",
                     },
-                    displayedRecipes.length > 0
-                      ? displayedRecipes.map((recipe, idx) => {
+                    (tutMockCustomRecipe
+                      ? [tutMockCustomRecipe, ...displayedRecipes]
+                      : displayedRecipes
+                    ).length > 0
+                      ? (tutMockCustomRecipe
+                          ? [tutMockCustomRecipe, ...displayedRecipes]
+                          : displayedRecipes
+                        ).map((recipe, idx) => {
                           const isSelected =
                             selectedRecipe && selectedRecipe.id === recipe.id;
                           const isCustom = recipe.rank === "Custom";
-                          const isFav = favorites.has(recipe.id);
+                          const isFav =
+                            (idx === 0 && tutMockCustomRecipe) ||
+                            favorites.has(recipe.id);
                           const inCart = cart.some(
                             (i) => i.recipeId === recipe.id,
                           );
@@ -11656,6 +11695,9 @@ function App() {
                             {
                               key: recipe.id ?? idx,
                               className: "relative",
+                              ...(idx === 0 && tutMockCustomRecipe
+                                ? { "data-tutorial": "tut-custom-list" }
+                                : {}),
                             },
                             /*#__PURE__*/ React.createElement(
                               "button",
@@ -12800,8 +12842,8 @@ function App() {
               },
               "data-tutorial": "tut-ingredient-counter",
             },
-            cartOpen &&
-              Object.keys(cartTotal).length > 0 &&
+            (cartOpen || _tutIngredientStep) &&
+              Object.keys(tutMockCartTotal || cartTotal).length > 0 &&
               /*#__PURE__*/ React.createElement(
                 "div",
                 {
@@ -12858,14 +12900,17 @@ function App() {
                   },
                   matSplitMode !== "recipe"
                     ? (() => {
-                        const noLager = Object.keys(parsedLager).length === 0;
-                        const allEntries = Object.entries(cartTotal).sort(
-                          ([aId], [bId]) => parseInt(aId) - parseInt(bId),
-                        );
+                        const noLager = tutMockLager
+                          ? false
+                          : Object.keys(parsedLager).length === 0;
+                        const allEntries = Object.entries(
+                          tutMockCartTotal || cartTotal,
+                        ).sort(([aId], [bId]) => parseInt(aId) - parseInt(bId));
                         const renderEntry = ([idStr, needed]) => {
                           const id = parseInt(idStr);
                           const mat = findItem(id);
-                          const inLager = parsedLager[id] || 0;
+                          const inLager =
+                            (tutMockLager || parsedLager)[id] || 0;
                           const ok = noLager || inLager >= needed;
                           return /*#__PURE__*/ React.createElement(
                             "div",
@@ -13362,7 +13407,7 @@ function App() {
                     {
                       className: "grid grid-cols-2 gap-4 mb-6",
                     },
-                    cauldron.map((slot, idx) => {
+                    (tutMockCauldron || cauldron).map((slot, idx) => {
                       const canSwap = !!selectedRecipe || isCustomMode;
                       const isMainMaterial = idx === 0;
                       const slotBg = (() => {
