@@ -597,7 +597,7 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
 
   // Tooltip positioning: below target preferred, fallback above, always clamped
   const TOOLTIP_W = 320;
-  const TOOLTIP_H = 220; // conservative estimate
+  const TOOLTIP_H = step?.imageSrc ? 360 : 220; // larger when image present
   let tooltipStyle = {
     position: "fixed",
     zIndex: 9999,
@@ -742,6 +742,15 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
         },
         t(step.textKey),
       ),
+      // Optional image
+      step.imageSrc &&
+        React.createElement("img", {
+          src: step.imageSrc,
+          alt: "Tutorial Demo",
+          className:
+            "w-full rounded-lg border border-slate-200 dark:border-slate-700 mb-3 object-contain",
+          style: { maxHeight: 160 },
+        }),
       // Navigation
       React.createElement(
         "div",
@@ -1263,6 +1272,11 @@ function App() {
           textKey: "tutLagerFilledText",
         },
         {
+          target: "tut-recipe-first",
+          titleKey: "tutLagerRecipeTitle",
+          textKey: "tutLagerRecipeText",
+        },
+        {
           target: "tut-ingredient-counter",
           titleKey: "tutLager3Title",
           textKey: "tutLager3Text",
@@ -1295,6 +1309,12 @@ function App() {
           target: "tut-session-ocr-btn",
           titleKey: "tutSession2Title",
           textKey: "tutSession2Text",
+          imageSrc: "png/tut-ocr-demo.png",
+        },
+        {
+          target: "tut-session-ocr-result",
+          titleKey: "tutSession2bTitle",
+          textKey: "tutSession2bText",
         },
         {
           target: "tut-session-agent",
@@ -2819,9 +2839,35 @@ function App() {
     if (step.target === "tut-lager-filled") {
       setLagerOpen(false);
     }
+    if (step.target === "tut-recipe-first") {
+      const recipe = (window.RECIPES || []).find((r) => r.id === 40000);
+      if (recipe) {
+        const mats = window.MATERIALS || [];
+        const mockLager = Object.fromEntries(
+          [0, 1, 2, 3]
+            .map((i, j) => (mats[i] ? [mats[i].id, j % 2 === 0 ? 5 : 0] : null))
+            .filter(Boolean),
+        );
+        const combo = window.findBestIngredients(
+          recipe,
+          0,
+          mockLager,
+          new Set(),
+          false,
+        );
+        if (combo) {
+          setSelectedRecipe(recipe);
+          setCauldron(combo);
+          const cat =
+            CATALYSTS.find((c) => c.name === recipe.catalyst) || CATALYSTS[0];
+          setCatalyst(cat);
+        }
+      }
+    }
     if (
       step.target === "tut-session-modal" ||
       step.target === "tut-session-ocr-btn" ||
+      step.target === "tut-session-ocr-result" ||
       step.target === "tut-session-agent" ||
       step.target === "tut-session-catalyst" ||
       step.target === "tut-session-steps"
@@ -3596,6 +3642,8 @@ function App() {
   const _tutIngredientStep =
     tutorialState?.steps?.[tutorialState?.step]?.target ===
     "tut-ingredient-counter";
+  const _tutRecipeFirstStep =
+    tutorialState?.steps?.[tutorialState?.step]?.target === "tut-recipe-first";
   const tutMockCauldron = _tutIngredientStep
     ? (() => {
         const mats = window.MATERIALS || [];
@@ -3619,6 +3667,17 @@ function App() {
         const r = (window.RECIPES || [])[0];
         return r ? { ...r, rank: "Custom" } : null;
       })()
+    : null;
+  const _tutOcrResultStep =
+    tutorialState?.steps?.[tutorialState?.step]?.target ===
+    "tut-session-ocr-result";
+  const tutMockSessionRecipes = _tutOcrResultStep
+    ? [40108, 40023, 40110, 40093, 40089].map((id) => ({
+        recipeId: id,
+        savedMaterials: [null, null, null, null],
+        _id: `tut_${id}`,
+        parentId: null,
+      }))
     : null;
   return /*#__PURE__*/ React.createElement(
     "div",
@@ -6170,6 +6229,9 @@ function App() {
                       {
                         className:
                           "flex-1 overflow-y-auto custom-scrollbar px-6 pb-4 min-h-0",
+                        ...(_tutOcrResultStep
+                          ? { "data-tutorial": "tut-session-ocr-result" }
+                          : {}),
                       },
                       /*#__PURE__*/ React.createElement(
                         "div",
@@ -6198,11 +6260,12 @@ function App() {
                                 .includes(sessionSearch.toLowerCase());
                             return true;
                           });
+                          const _sr = tutMockSessionRecipes || sessionRecipes;
                           const selectedIds = new Set(
-                            sessionRecipes.map((e) => e.recipeId),
+                            _sr.map((e) => e.recipeId),
                           );
                           const seenSel = new Set();
-                          const selected = sessionRecipes
+                          const selected = _sr
                             .map((e) => {
                               if (seenSel.has(e.recipeId)) return null;
                               seenSel.add(e.recipeId);
@@ -6212,19 +6275,19 @@ function App() {
                           const favs = filtered.filter(
                             (r) =>
                               favorites.has(r.id) &&
-                              !sessionRecipes.some((e) => e.recipeId === r.id),
+                              !_sr.some((e) => e.recipeId === r.id),
                           );
                           const rest = filtered.filter(
                             (r) =>
                               !favorites.has(r.id) &&
-                              !sessionRecipes.some((e) => e.recipeId === r.id),
+                              !_sr.some((e) => e.recipeId === r.id),
                           );
                           return [...selected, ...favs, ...rest].map(
                             (recipe) => {
-                              const sel = sessionRecipes.some(
+                              const sel = _sr.some(
                                 (e) => e.recipeId === recipe.id,
                               );
-                              const selCount = sessionRecipes.filter(
+                              const selCount = _sr.filter(
                                 (e) => e.recipeId === recipe.id,
                               ).length;
                               const isFav = favorites.has(recipe.id);
@@ -11724,6 +11787,11 @@ function App() {
                               ...(idx === 0 && tutMockCustomRecipe
                                 ? { "data-tutorial": "tut-custom-list" }
                                 : {}),
+                              ...(idx === 0 &&
+                              _tutRecipeFirstStep &&
+                              !tutMockCustomRecipe
+                                ? { "data-tutorial": "tut-recipe-first" }
+                                : {}),
                             },
                             /*#__PURE__*/ React.createElement(
                               "button",
@@ -12866,9 +12934,8 @@ function App() {
               style: {
                 gridColumn: "3",
               },
-              "data-tutorial": "tut-ingredient-counter",
             },
-            (cartOpen || _tutIngredientStep) &&
+            cartOpen &&
               Object.keys(tutMockCartTotal || cartTotal).length > 0 &&
               /*#__PURE__*/ React.createElement(
                 "div",
@@ -13432,6 +13499,9 @@ function App() {
                     "div",
                     {
                       className: "grid grid-cols-2 gap-4 mb-6",
+                      ...(_tutIngredientStep
+                        ? { "data-tutorial": "tut-ingredient-counter" }
+                        : {}),
                     },
                     (tutMockCauldron || cauldron).map((slot, idx) => {
                       const canSwap = !!selectedRecipe || isCustomMode;
@@ -13502,6 +13572,20 @@ function App() {
                                 "absolute top-1 left-1 bg-indigo-500 dark:bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow-sm font-bold z-10",
                             },
                             "MAIN (x2)",
+                          ),
+                        slot &&
+                          (Object.keys(parsedLager).length > 0 ||
+                            tutMockLagerPreview) &&
+                          /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              className:
+                                "absolute top-1 right-1 flex items-center gap-0.5 py-0.5 px-1 rounded bg-slate-100 dark:bg-slate-700/60 text-[10px] font-bold text-slate-500 dark:text-slate-400 z-10 group-hover:opacity-20 transition-opacity",
+                            },
+                            /*#__PURE__*/ React.createElement("i", {
+                              className: "fa-solid fa-box text-[9px]",
+                            }),
+                            (tutMockLagerPreview || parsedLager)[slot.id] ?? 0,
                           ),
                         slot
                           ? /*#__PURE__*/ React.createElement(
