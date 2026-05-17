@@ -96,4 +96,15 @@ window.SECRET_RECIPES = [
     catalyst: "Blue Gemstone",
     extraItemIds: [522],
   },
+  {
+    id: 40125,
+    name: "Philosopher Stone",
+    ingredients: ["Alloy", "Magic", "Sand", "Magic"],
+    mainIngredient: 40019,
+    potionBase: 610,
+    element: "Earth",
+    minScore: 0,
+    minQuality: 0,
+    extraItemIds: [40130],
+  },
 ];
