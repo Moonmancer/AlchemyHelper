@@ -104,7 +104,8 @@ window.SECRET_RECIPES = [
     potionBase: 610,
     element: "Earth",
     minScore: 0,
-    minQuality: 0,
+    maxScore: 100,
+    minQuality: 100,
     extraItemIds: [40130],
   },
 ];

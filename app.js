@@ -122,10 +122,13 @@ window.findBestIngredients = (
               : w2;
       const meetsMinScore =
         !(recipe.minScore > 0) || elTotal >= recipe.minScore;
+      const meetsMaxScore =
+        recipe.maxScore == null || elTotal <= recipe.maxScore;
       if (
         dom === recipe.element &&
         calculatedQuality >= recipe.minQuality &&
-        meetsMinScore
+        meetsMinScore &&
+        meetsMaxScore
       ) {
         const qs = currentCombo.map((m) => m.quality);
         const othersAvg = (qs[1] + qs[2] + qs[3]) / 3;
@@ -2923,6 +2926,11 @@ function App() {
           stats[secret.element.toLowerCase()] < secret.minScore
         )
           return false;
+        if (
+          secret.maxScore != null &&
+          stats[secret.element.toLowerCase()] > secret.maxScore
+        )
+          return false;
         if (stats.quality < (secret.minQuality || 0)) return false;
         if (secret.catalyst !== undefined && catalyst.name !== secret.catalyst)
           return false;
@@ -2957,6 +2965,7 @@ function App() {
               product: currentMatchedSecret.name,
               element: currentMatchedSecret.element || "None",
               minScore: currentMatchedSecret.minScore || 0,
+              maxScore: currentMatchedSecret.maxScore ?? null,
               minQuality: currentMatchedSecret.minQuality || 0,
               id: currentMatchedSecret.id,
               rank: "Secret",
@@ -2971,7 +2980,15 @@ function App() {
     const isSufficientScore =
       !(effectiveRecipe.minScore > 0) ||
       stats[elKey] >= effectiveRecipe.minScore;
-    return isCorrectElement && isSufficientQuality && isSufficientScore;
+    const isBelowMaxScore =
+      effectiveRecipe.maxScore == null ||
+      stats[elKey] <= effectiveRecipe.maxScore;
+    return (
+      isCorrectElement &&
+      isSufficientQuality &&
+      isSufficientScore &&
+      isBelowMaxScore
+    );
   }, [effectiveRecipe, dominantElement, stats]);
   // Real-time Secret-Rezept-Matching
   React.useEffect(() => {
@@ -3000,6 +3017,11 @@ function App() {
       if (
         secret.minScore > 0 &&
         stats[secret.element.toLowerCase()] < secret.minScore
+      )
+        return false;
+      if (
+        secret.maxScore != null &&
+        stats[secret.element.toLowerCase()] > secret.maxScore
       )
         return false;
       if (stats.quality < (secret.minQuality || 0)) return false;
@@ -6040,6 +6062,8 @@ function App() {
                               quality >= recipe.minQuality &&
                               (!(recipe.minScore > 0) ||
                                 totals[elKey] >= recipe.minScore) &&
+                              (recipe.maxScore == null ||
+                                totals[elKey] <= recipe.maxScore) &&
                               lagerOk;
                             const isActive = idx === sessionActiveIdx;
                             const isRoot =
@@ -12680,7 +12704,7 @@ function App() {
                                     className:
                                       "text-[10px] font-bold text-slate-400",
                                   },
-                                  "\xC3\u2014",
+                                  "\u00D7",
                                   quantity,
                                 ),
                               !noLager &&
