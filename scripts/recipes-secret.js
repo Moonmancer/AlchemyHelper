@@ -108,4 +108,16 @@ window.SECRET_RECIPES = [
     minQuality: 100,
     extraItemIds: [40130],
   },
+  {
+    id: 7138,
+    name: "Marine Sphere Bottle",
+    ingredients: ["Beast", "Sand", "Wood", "Food"],
+    mainIngredient: 40013,
+    potionBase: 656,
+    element: "Air",
+    minScore: 210,
+    minQuality: 60,
+    catalyst: "Mistress' Essence",
+    extraItemIds: [735],
+  },
 ];
