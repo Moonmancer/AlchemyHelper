@@ -556,6 +556,238 @@ const MapView = ({
       ),
   );
 };
+
+// ─── Tutorial Overlay ──────────────────────────────────────────────────────
+const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
+  const [rect, setRect] = React.useState(null);
+  const step = tutorialState?.steps?.[tutorialState.step] ?? null;
+
+  React.useEffect(() => {
+    if (!step) return;
+    const update = () => {
+      const el = document.querySelector(`[data-tutorial="${step.target}"]`);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      } else {
+        setRect(null);
+      }
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [step?.target, tutorialState?.step]);
+
+  if (!step) return null;
+
+  const PAD = 10;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const stepIndex = tutorialState.step;
+  const totalSteps = tutorialState.steps.length;
+
+  // Tooltip positioning: below target preferred, fallback above, always clamped
+  const TOOLTIP_W = 320;
+  const TOOLTIP_H = 220; // conservative estimate
+  let tooltipStyle = {
+    position: "fixed",
+    zIndex: 9999,
+    width: TOOLTIP_W,
+    maxWidth: "90vw",
+  };
+  if (rect) {
+    const spaceBelow = vh - (rect.top + rect.height + PAD);
+    const spaceAbove = rect.top - PAD;
+    let top;
+    if (spaceBelow >= TOOLTIP_H) {
+      top = rect.top + rect.height + PAD;
+    } else if (spaceAbove >= TOOLTIP_H) {
+      top = rect.top - PAD - TOOLTIP_H;
+    } else {
+      // Not enough room either way – prefer below, clamp into viewport
+      top = Math.max(
+        12,
+        Math.min(rect.top + rect.height + PAD, vh - TOOLTIP_H - 12),
+      );
+    }
+    tooltipStyle.top = Math.max(12, Math.min(top, vh - TOOLTIP_H - 12));
+    // Horizontal: center on target, clamp to viewport
+    let left = rect.left + rect.width / 2 - TOOLTIP_W / 2;
+    left = Math.max(12, Math.min(left, vw - TOOLTIP_W - 12));
+    tooltipStyle.left = left;
+  } else {
+    // No target found: center on screen
+    tooltipStyle.top = "50%";
+    tooltipStyle.left = "50%";
+    tooltipStyle.transform = "translate(-50%, -50%)";
+  }
+
+  // SVG spotlight cutout
+  const spotlight = rect
+    ? `M 0 0 H ${vw} V ${vh} H 0 Z M ${rect.left - PAD} ${rect.top - PAD} H ${rect.left + rect.width + PAD} V ${rect.top + rect.height + PAD} H ${rect.left - PAD} Z`
+    : null;
+
+  return React.createElement(
+    React.Fragment,
+    null,
+    // Dark backdrop with cutout
+    React.createElement(
+      "div",
+      {
+        style: {
+          position: "fixed",
+          inset: 0,
+          zIndex: 9990,
+          pointerEvents: "none",
+        },
+      },
+      React.createElement(
+        "svg",
+        {
+          width: vw,
+          height: vh,
+          style: { position: "absolute", inset: 0 },
+        },
+        spotlight &&
+          React.createElement("path", {
+            d: spotlight,
+            fill: "rgba(0,0,0,0.6)",
+            fillRule: "evenodd",
+          }),
+        !spotlight &&
+          React.createElement("rect", {
+            width: vw,
+            height: vh,
+            fill: "rgba(0,0,0,0.6)",
+          }),
+        rect &&
+          React.createElement("rect", {
+            x: rect.left - PAD,
+            y: rect.top - PAD,
+            width: rect.width + PAD * 2,
+            height: rect.height + PAD * 2,
+            rx: 10,
+            fill: "none",
+            stroke: "rgb(99,102,241)",
+            strokeWidth: 3,
+          }),
+      ),
+    ),
+    // Transparent click-catcher to block interactions outside tooltip
+    React.createElement("div", {
+      style: { position: "fixed", inset: 0, zIndex: 9991 },
+      onClick: onClose,
+    }),
+    // Tooltip
+    React.createElement(
+      "div",
+      {
+        style: tooltipStyle,
+        onClick: (e) => e.stopPropagation(),
+        className:
+          "bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-indigo-300 dark:border-indigo-600 p-4",
+      },
+      // Header
+      React.createElement(
+        "div",
+        { className: "flex items-start justify-between mb-2" },
+        React.createElement(
+          "h3",
+          {
+            className:
+              "text-sm font-black text-indigo-600 dark:text-indigo-400 leading-tight pr-2",
+          },
+          t(step.titleKey),
+        ),
+        React.createElement(
+          "div",
+          { className: "flex items-center gap-2 flex-shrink-0" },
+          React.createElement(
+            "span",
+            {
+              className:
+                "text-[10px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap",
+            },
+            `${stepIndex + 1}/${totalSteps}`,
+          ),
+          React.createElement(
+            "button",
+            {
+              onClick: onClose,
+              className:
+                "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors",
+              title: t("tutClose"),
+            },
+            React.createElement("i", {
+              className: "fa-solid fa-xmark text-sm",
+            }),
+          ),
+        ),
+      ),
+      // Text
+      React.createElement(
+        "p",
+        {
+          className:
+            "text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3",
+        },
+        t(step.textKey),
+      ),
+      // Navigation
+      React.createElement(
+        "div",
+        { className: "flex items-center justify-between gap-2" },
+        React.createElement(
+          "button",
+          {
+            onClick: onClose,
+            className:
+              "text-xs text-slate-400 hover:text-red-500 transition-colors",
+          },
+          t("tutSkip"),
+        ),
+        React.createElement(
+          "div",
+          { className: "flex gap-2" },
+          stepIndex > 0 &&
+            React.createElement(
+              "button",
+              {
+                onClick: onPrev,
+                className:
+                  "px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-indigo-300 transition-colors",
+              },
+              t("tutPrev"),
+            ),
+          stepIndex < totalSteps - 1
+            ? React.createElement(
+                "button",
+                {
+                  onClick: onNext,
+                  className:
+                    "px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors",
+                },
+                t("tutNext"),
+              )
+            : React.createElement(
+                "button",
+                {
+                  onClick: onClose,
+                  className:
+                    "px-3 py-1.5 text-xs font-bold rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors",
+                },
+                t("tutClose"),
+              ),
+        ),
+      ),
+    ),
+  );
+};
+
 function App() {
   const [cauldron, setCauldron] = useState(() => {
     const s = readStateCookie();
@@ -1004,7 +1236,88 @@ function App() {
   const [matGrouped, setMatGrouped] = useState(false);
   const pendingRemove = React.useRef({});
 
-  // Session-Workflow
+  // Tutorial
+  const [tutorialState, setTutorialState] = useState(null); // null | { steps, step }
+  const closeTutorial = () => setTutorialState(null);
+  const startTutorial = React.useCallback(
+    (type) => {
+      const LAGER_STEPS = [
+        {
+          target: "tut-lager-section",
+          titleKey: "tutLager1Title",
+          textKey: "tutLager1Text",
+        },
+        {
+          target: "tut-lager-edit-btn",
+          titleKey: "tutLager2Title",
+          textKey: "tutLager2Text",
+        },
+        {
+          target: "tut-ingredient-counter",
+          titleKey: "tutLager3Title",
+          textKey: "tutLager3Text",
+        },
+      ];
+      const CUSTOM_STEPS = [
+        {
+          target: "tut-custom-tab",
+          titleKey: "tutCustom1Title",
+          textKey: "tutCustom1Text",
+        },
+        {
+          target: "tut-custom-form",
+          titleKey: "tutCustom2Title",
+          textKey: "tutCustom2Text",
+        },
+        {
+          target: "tut-custom-list",
+          titleKey: "tutCustom3Title",
+          textKey: "tutCustom3Text",
+        },
+      ];
+      const SESSION_STEPS = [
+        {
+          target: "tut-session-modal",
+          titleKey: "tutSession1Title",
+          textKey: "tutSession1Text",
+        },
+        {
+          target: "tut-session-ocr-btn",
+          titleKey: "tutSession2Title",
+          textKey: "tutSession2Text",
+        },
+        {
+          target: "tut-session-agent",
+          titleKey: "tutSession3Title",
+          textKey: "tutSession3Text",
+        },
+        {
+          target: "tut-session-catalyst",
+          titleKey: "tutSession4Title",
+          textKey: "tutSession4Text",
+        },
+        {
+          target: "tut-session-steps",
+          titleKey: "tutSession5Title",
+          textKey: "tutSession5Text",
+        },
+      ];
+      const stepsMap = {
+        lager: LAGER_STEPS,
+        custom: CUSTOM_STEPS,
+        session: SESSION_STEPS,
+        lagerCustom: [...LAGER_STEPS, ...CUSTOM_STEPS],
+        full: [...LAGER_STEPS, ...CUSTOM_STEPS, ...SESSION_STEPS],
+      };
+      const steps = stepsMap[type] || LAGER_STEPS;
+      if (steps[0]?.onEnter) steps[0].onEnter();
+      setTutorialState({ steps, step: 0 });
+      localStorage.setItem("alchemyTutorialSeen", "1");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const _savedSession = (() => {
     try {
       return JSON.parse(localStorage.getItem("alchemySession") || "null");
@@ -2465,6 +2778,46 @@ function App() {
     setSwapSearchQuery("");
     setCartOpen(false);
   };
+
+  // Tutorial: first-time detection
+  useEffect(() => {
+    const seen = localStorage.getItem("alchemyTutorialSeen");
+    if (!seen) {
+      const hasData =
+        localStorage.getItem("alchemyLager") ||
+        localStorage.getItem("alchemySession");
+      if (hasData) {
+        localStorage.setItem("alchemyTutorialSeen", "1");
+      } else {
+        startTutorial("full");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tutorial: side effects on step change (open modals etc.)
+  useEffect(() => {
+    if (!tutorialState) return;
+    const step = tutorialState.steps[tutorialState.step];
+    if (!step) return;
+    if (
+      step.target === "tut-custom-form" ||
+      step.target === "tut-custom-list"
+    ) {
+      switchToCustomMode();
+    }
+    if (
+      step.target === "tut-session-modal" ||
+      step.target === "tut-session-ocr-btn" ||
+      step.target === "tut-session-agent" ||
+      step.target === "tut-session-catalyst" ||
+      step.target === "tut-session-steps"
+    ) {
+      setSessionOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialState?.step, tutorialState?.steps]);
+
   const handleAddToCart = (recipe, e) => {
     e.stopPropagation();
     const currentMaterials =
@@ -4378,6 +4731,18 @@ function App() {
             /*#__PURE__*/ React.createElement(
               "button",
               {
+                onClick: () => startTutorial("lagerCustom"),
+                className:
+                  "p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all w-[54px] flex items-center justify-center",
+                title: t("tutHelpBtn"),
+              },
+              /*#__PURE__*/ React.createElement("i", {
+                className: "fa-solid fa-circle-question text-xl",
+              }),
+            ),
+            /*#__PURE__*/ React.createElement(
+              "button",
+              {
                 onClick: () => setSettingsOpen(true),
                 className: `p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all w-[54px] flex items-center justify-center relative`,
                 title: t("settingsTitle"),
@@ -5490,19 +5855,108 @@ function App() {
                 "div",
                 {
                   className:
-                    "bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-[45vw] min-w-[620px] flex flex-col h-[85vh]",
+                    "bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-[45vw] min-w-[660px] flex flex-col h-[85vh] overflow-hidden",
+                  "data-tutorial": "tut-session-modal",
                   onClick: (e) => e.stopPropagation(),
                 },
                 /*#__PURE__*/ React.createElement(
                   "div",
                   {
                     className:
-                      "flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0",
+                      "px-6 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0 flex flex-col gap-2",
                   },
                   /*#__PURE__*/ React.createElement(
                     "div",
                     {
+                      className: "flex items-center justify-between",
+                    },
+                    /*#__PURE__*/ React.createElement(
+                      "span",
+                      {
+                        className:
+                          "text-sm font-bold text-slate-600 dark:text-slate-300",
+                      },
+                      sessionStep === 1
+                        ? t("step1Label")
+                        : sessionStep === 2
+                          ? t("step2Label")
+                          : sessionStep === 3
+                            ? t("step3Label")
+                            : sessionStep === 4
+                              ? t("step4Label")
+                              : sessionStep === 5
+                                ? t("step5Label")
+                                : t("step6Label"),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      {
+                        className: "flex items-center gap-2",
+                      },
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: async () => {
+                            if (
+                              !(await showConfirm(
+                                lang === "de"
+                                  ? "Session wirklich verwerfen?"
+                                  : "Really discard session?",
+                              ))
+                            )
+                              return;
+                            try {
+                              localStorage.removeItem("alchemySession");
+                            } catch {}
+                            setSessionRecipes([]);
+                            setSessionStep(1);
+                            setSessionMaxStep(1);
+                            setSessionSearch("");
+                            setSessionCauldron([null, null, null, null]);
+                            setSessionActiveIdx(0);
+                            setSessionDelivery([]);
+                            setSessionDeliveryTab([]);
+                            setSessionAgents([]);
+                          },
+                          className:
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors",
+                        },
+                        /*#__PURE__*/ React.createElement("i", {
+                          className: "fa-solid fa-trash text-xs",
+                        }),
+                        " ",
+                        t("sessionDiscard"),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: () => startTutorial("session"),
+                          className:
+                            "text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors",
+                          title: t("tutHelpBtn"),
+                        },
+                        /*#__PURE__*/ React.createElement("i", {
+                          className: "fa-solid fa-circle-question text-xl",
+                        }),
+                      ),
+                      /*#__PURE__*/ React.createElement(
+                        "button",
+                        {
+                          onClick: () => setSessionOpen(false),
+                          className:
+                            "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
+                        },
+                        /*#__PURE__*/ React.createElement("i", {
+                          className: "fa-solid fa-xmark text-xl",
+                        }),
+                      ),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    {
                       className: "flex items-center gap-3",
+                      "data-tutorial": "tut-session-steps",
                     },
                     [1, 2, 3, 4, 5, 6].map((s, i) =>
                       /*#__PURE__*/ React.createElement(
@@ -5538,75 +5992,6 @@ function App() {
                         ),
                       ),
                     ),
-                    /*#__PURE__*/ React.createElement(
-                      "span",
-                      {
-                        className:
-                          "ml-2 text-sm font-bold text-slate-600 dark:text-slate-300",
-                      },
-                      sessionStep === 1
-                        ? t("step1Label")
-                        : sessionStep === 2
-                          ? t("step2Label")
-                          : sessionStep === 3
-                            ? t("step3Label")
-                            : sessionStep === 4
-                              ? t("step4Label")
-                              : sessionStep === 5
-                                ? t("step5Label")
-                                : t("step6Label"),
-                    ),
-                  ),
-                  /*#__PURE__*/ React.createElement(
-                    "div",
-                    {
-                      className: "flex items-center gap-2",
-                    },
-                    /*#__PURE__*/ React.createElement(
-                      "button",
-                      {
-                        onClick: async () => {
-                          if (
-                            !(await showConfirm(
-                              lang === "de"
-                                ? "Session wirklich verwerfen?"
-                                : "Really discard session?",
-                            ))
-                          )
-                            return;
-                          try {
-                            localStorage.removeItem("alchemySession");
-                          } catch {}
-                          setSessionRecipes([]);
-                          setSessionStep(1);
-                          setSessionMaxStep(1);
-                          setSessionSearch("");
-                          setSessionCauldron([null, null, null, null]);
-                          setSessionActiveIdx(0);
-                          setSessionDelivery([]);
-                          setSessionDeliveryTab([]);
-                          setSessionAgents([]);
-                        },
-                        className:
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors",
-                      },
-                      /*#__PURE__*/ React.createElement("i", {
-                        className: "fa-solid fa-trash text-xs",
-                      }),
-                      " ",
-                      t("sessionDiscard"),
-                    ),
-                    /*#__PURE__*/ React.createElement(
-                      "button",
-                      {
-                        onClick: () => setSessionOpen(false),
-                        className:
-                          "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors",
-                      },
-                      /*#__PURE__*/ React.createElement("i", {
-                        className: "fa-solid fa-xmark text-xl",
-                      }),
-                    ),
                   ),
                 ),
                 sessionStep === 1 &&
@@ -5635,6 +6020,7 @@ function App() {
                           "button",
                           {
                             onClick: scanScreenshot,
+                            "data-tutorial": "tut-session-ocr-btn",
                             disabled:
                               ocrState === "loading" || ocrState === "paste",
                             className: `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 ml-3 transition-all ${ocrState === "loading" ? "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-wait" : ocrState === "paste" ? "bg-indigo-500 text-white animate-pulse cursor-default" : ocrState === "noimage" || ocrState === "error" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : ocrState?.found > 0 ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : ocrState?.found === 0 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : ocrWorkerReady === false ? "bg-slate-100 dark:bg-slate-800 text-slate-400" : "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800/60"}`,
@@ -6789,6 +7175,7 @@ function App() {
                                   "div",
                                   {
                                     className: "mb-3 mt-3",
+                                    "data-tutorial": "tut-session-agent",
                                   },
                                   (() => {
                                     const _ar = sessionAgent
@@ -7049,6 +7436,7 @@ function App() {
                                   "div",
                                   {
                                     className: "grid grid-cols-2 gap-3 mb-3",
+                                    "data-tutorial": "tut-session-catalyst",
                                   },
                                   /*#__PURE__*/ React.createElement(
                                     "div",
@@ -10870,6 +11258,7 @@ function App() {
               {
                 className:
                   "bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 flex flex-col transition-colors flex-1 min-h-0 relative",
+                "data-tutorial": "tut-lager-section",
               },
               lagerPasteToast !== null &&
                 /*#__PURE__*/ React.createElement(
@@ -10907,6 +11296,7 @@ function App() {
                   "button",
                   {
                     onClick: () => setLagerOpen((o) => !o),
+                    "data-tutorial": "tut-lager-edit-btn",
                     className:
                       "text-xs font-bold text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors flex items-center gap-1",
                     title: lagerOpen ? t("lagerClose") : t("lagerEdit"),
@@ -11125,6 +11515,7 @@ function App() {
                   "button",
                   {
                     onClick: switchToCustomMode,
+                    "data-tutorial": "tut-custom-tab",
                     className: `flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${isCustomMode ? "bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`,
                   },
                   /*#__PURE__*/ React.createElement("i", {
@@ -11245,6 +11636,7 @@ function App() {
                     {
                       className:
                         "overflow-y-auto pr-2 space-y-3 flex-1 custom-scrollbar min-h-0",
+                      "data-tutorial": "tut-custom-list",
                     },
                     displayedRecipes.length > 0
                       ? displayedRecipes.map((recipe, idx) => {
@@ -11603,6 +11995,7 @@ function App() {
                     "div",
                     {
                       className: "mb-4 flex items-start justify-between gap-2",
+                      "data-tutorial": "tut-custom-form",
                     },
                     /*#__PURE__*/ React.createElement(
                       "div",
@@ -12405,6 +12798,7 @@ function App() {
               style: {
                 gridColumn: "3",
               },
+              "data-tutorial": "tut-ingredient-counter",
             },
             cartOpen &&
               Object.keys(cartTotal).length > 0 &&
@@ -14006,6 +14400,26 @@ function App() {
             })(),
           ),
         ),
+      tutorialState &&
+        /*#__PURE__*/ React.createElement(TutorialOverlay, {
+          tutorialState,
+          onNext: () =>
+            setTutorialState((prev) => {
+              if (!prev) return null;
+              const next = prev.step + 1;
+              if (next >= prev.steps.length) return null;
+              const nextStep = prev.steps[next];
+              // Side effects handled via useEffect
+              return { ...prev, step: next };
+            }),
+          onPrev: () =>
+            setTutorialState((prev) => {
+              if (!prev || prev.step <= 0) return prev;
+              return { ...prev, step: prev.step - 1 };
+            }),
+          onClose: closeTutorial,
+          t,
+        }),
     ),
   );
 }
