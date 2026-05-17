@@ -558,8 +558,16 @@ const MapView = ({
 };
 
 // ─── Tutorial Overlay ──────────────────────────────────────────────────────
-const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
+const TutorialOverlay = ({
+  tutorialState,
+  onNext,
+  onPrev,
+  onClose,
+  t,
+  focusMode,
+}) => {
   const [rect, setRect] = React.useState(null);
+  const [rectExtra, setRectExtra] = React.useState(null);
   const step = tutorialState?.steps?.[tutorialState.step] ?? null;
 
   React.useEffect(() => {
@@ -571,6 +579,24 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
         setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
       } else {
         setRect(null);
+      }
+      if (step.extraTarget) {
+        const el2 = document.querySelector(
+          `[data-tutorial="${step.extraTarget}"]`,
+        );
+        if (el2) {
+          const r2 = el2.getBoundingClientRect();
+          setRectExtra({
+            top: r2.top,
+            left: r2.left,
+            width: r2.width,
+            height: r2.height,
+          });
+        } else {
+          setRectExtra(null);
+        }
+      } else {
+        setRectExtra(null);
       }
     };
     update();
@@ -585,7 +611,7 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [step?.target, tutorialState?.step]);
+  }, [step?.target, step?.extraTarget, tutorialState?.step, focusMode]);
 
   if (!step) return null;
 
@@ -632,9 +658,16 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
   }
 
   // SVG spotlight cutout
-  const spotlight = rect
-    ? `M 0 0 H ${vw} V ${vh} H 0 Z M ${rect.left - PAD} ${rect.top - PAD} H ${rect.left + rect.width + PAD} V ${rect.top + rect.height + PAD} H ${rect.left - PAD} Z`
-    : null;
+  const cutout1 = rect
+    ? `M ${rect.left - PAD} ${rect.top - PAD} H ${rect.left + rect.width + PAD} V ${rect.top + rect.height + PAD} H ${rect.left - PAD} Z`
+    : "";
+  const cutout2 = rectExtra
+    ? `M ${rectExtra.left - PAD} ${rectExtra.top - PAD} H ${rectExtra.left + rectExtra.width + PAD} V ${rectExtra.top + rectExtra.height + PAD} H ${rectExtra.left - PAD} Z`
+    : "";
+  const spotlight =
+    cutout1 || cutout2
+      ? `M 0 0 H ${vw} V ${vh} H 0 Z ${cutout1} ${cutout2}`
+      : null;
 
   return React.createElement(
     React.Fragment,
@@ -675,6 +708,17 @@ const TutorialOverlay = ({ tutorialState, onNext, onPrev, onClose, t }) => {
             y: rect.top - PAD,
             width: rect.width + PAD * 2,
             height: rect.height + PAD * 2,
+            rx: 10,
+            fill: "none",
+            stroke: "rgb(99,102,241)",
+            strokeWidth: 3,
+          }),
+        rectExtra &&
+          React.createElement("rect", {
+            x: rectExtra.left - PAD,
+            y: rectExtra.top - PAD,
+            width: rectExtra.width + PAD * 2,
+            height: rectExtra.height + PAD * 2,
             rx: 10,
             fill: "none",
             stroke: "rgb(99,102,241)",
@@ -1252,9 +1296,16 @@ function App() {
 
   // Tutorial
   const [tutorialState, setTutorialState] = useState(null); // null | { steps, step }
-  const closeTutorial = () => setTutorialState(null);
+  const _preTutFocusMode = React.useRef(null);
+  const closeTutorial = () => {
+    if (_preTutFocusMode.current !== null) {
+      setFocusMode(_preTutFocusMode.current);
+      _preTutFocusMode.current = null;
+    }
+    setTutorialState(null);
+  };
   const startTutorial = React.useCallback(
-    (type) => {
+    (type, initialStep = 0) => {
       const LAGER_STEPS = [
         {
           target: "tut-lager-section",
@@ -1317,6 +1368,28 @@ function App() {
           textKey: "tutSession2bText",
         },
         {
+          target: "tut-session-steps",
+          extraTarget: "tut-session-next",
+          titleKey: "tutSession5Title",
+          textKey: "tutSession5Text",
+        },
+        {
+          target: "tut-session-recipe-bar",
+          titleKey: "tutSession6Title",
+          textKey: "tutSession6Text",
+        },
+        {
+          target: "tut-session-tab-switch",
+          titleKey: "tutSession7Title",
+          textKey: "tutSession7Text",
+        },
+        {
+          target: "tut-session-focus-grid",
+          extraTarget: "tut-session-focus",
+          titleKey: "tutSession8Title",
+          textKey: "tutSession8Text",
+        },
+        {
           target: "tut-session-agent",
           titleKey: "tutSession3Title",
           textKey: "tutSession3Text",
@@ -1325,11 +1398,6 @@ function App() {
           target: "tut-session-catalyst",
           titleKey: "tutSession4Title",
           textKey: "tutSession4Text",
-        },
-        {
-          target: "tut-session-steps",
-          titleKey: "tutSession5Title",
-          textKey: "tutSession5Text",
         },
       ];
       const stepsMap = {
@@ -1341,11 +1409,15 @@ function App() {
       };
       const steps = stepsMap[type] || LAGER_STEPS;
       if (steps[0]?.onEnter) steps[0].onEnter();
-      setTutorialState({ steps, step: 0 });
+      _preTutFocusMode.current = focusMode;
+      setTutorialState({
+        steps,
+        step: Math.min(initialStep, steps.length - 1),
+      });
       localStorage.setItem("alchemyTutorialSeen", "1");
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [focusMode],
   );
 
   const _savedSession = (() => {
@@ -2867,12 +2939,61 @@ function App() {
     if (
       step.target === "tut-session-modal" ||
       step.target === "tut-session-ocr-btn" ||
+      step.target === "tut-session-ocr-result"
+    ) {
+      setSessionStep(1);
+    }
+    if (
+      step.target === "tut-session-modal" ||
+      step.target === "tut-session-ocr-btn" ||
       step.target === "tut-session-ocr-result" ||
       step.target === "tut-session-agent" ||
       step.target === "tut-session-catalyst" ||
-      step.target === "tut-session-steps"
+      step.target === "tut-session-steps" ||
+      step.target === "tut-session-recipe-bar" ||
+      step.target === "tut-session-tab-switch" ||
+      step.target === "tut-session-focus-grid"
     ) {
       setSessionOpen(true);
+    }
+    if (
+      step.target === "tut-session-agent" ||
+      step.target === "tut-session-catalyst" ||
+      step.target === "tut-session-steps" ||
+      step.target === "tut-session-recipe-bar" ||
+      step.target === "tut-session-tab-switch" ||
+      step.target === "tut-session-focus-grid"
+    ) {
+      setSessionRecipes((prev) =>
+        prev.length === 0
+          ? [
+              {
+                recipeId: 40108,
+                savedMaterials: [null, null, null, null],
+                _id: "tut_a",
+                parentId: null,
+              },
+            ]
+          : prev,
+      );
+      setSessionActiveIdx(0);
+      setSessionStep(2);
+    }
+    if (step.target === "tut-session-focus-grid") {
+      setFocusMode(true);
+    } else if (
+      [
+        "tut-session-modal",
+        "tut-session-ocr-btn",
+        "tut-session-ocr-result",
+        "tut-session-steps",
+        "tut-session-recipe-bar",
+        "tut-session-tab-switch",
+        "tut-session-agent",
+        "tut-session-catalyst",
+      ].includes(step.target)
+    ) {
+      setFocusMode(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutorialState?.step, tutorialState?.steps]);
@@ -3671,7 +3792,16 @@ function App() {
   const _tutOcrResultStep =
     tutorialState?.steps?.[tutorialState?.step]?.target ===
     "tut-session-ocr-result";
-  const tutMockSessionRecipes = _tutOcrResultStep
+  const _tutMockSessionActive = [
+    "tut-session-ocr-result",
+    "tut-session-agent",
+    "tut-session-catalyst",
+    "tut-session-steps",
+    "tut-session-recipe-bar",
+    "tut-session-tab-switch",
+    "tut-session-focus-grid",
+  ].includes(tutorialState?.steps?.[tutorialState?.step]?.target ?? "");
+  const tutMockSessionRecipes = _tutMockSessionActive
     ? [40108, 40023, 40110, 40093, 40089].map((id) => ({
         recipeId: id,
         savedMaterials: [null, null, null, null],
@@ -6046,7 +6176,11 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                         "button",
                         {
-                          onClick: () => startTutorial("session"),
+                          onClick: () => {
+                            const idx =
+                              sessionStep === 1 ? 0 : sessionStep === 2 ? 4 : 8;
+                            startTutorial("session", idx);
+                          },
                           className:
                             "text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors",
                           title: t("tutHelpBtn"),
@@ -6406,6 +6540,7 @@ function App() {
                       "div",
                       {
                         className: "px-6 pt-4 pb-2 flex-shrink-0",
+                        "data-tutorial": "tut-session-recipe-bar",
                       },
                       /*#__PURE__*/ React.createElement(
                         "div",
@@ -6437,6 +6572,7 @@ function App() {
                             {
                               onClick: toggleFocusMode,
                               title: t("focusModeLabel"),
+                              "data-tutorial": "tut-session-focus",
                               className: `relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${focusMode ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-600"}`,
                             },
                             /*#__PURE__*/ React.createElement("span", {
@@ -6448,6 +6584,7 @@ function App() {
                       /*#__PURE__*/ React.createElement(
                         "div",
                         {
+                          "data-tutorial": "tut-session-focus-grid",
                           className: focusMode
                             ? "w-full"
                             : "flex flex-wrap gap-2 items-start",
@@ -6460,19 +6597,18 @@ function App() {
                             : undefined,
                         },
                         (() => {
+                          const _sr2 = tutMockSessionRecipes || sessionRecipes;
                           const childrenOf = {};
-                          sessionRecipes.forEach((r, i) => {
+                          _sr2.forEach((r, i) => {
                             if (r.parentId) {
                               if (!childrenOf[r.parentId])
                                 childrenOf[r.parentId] = [];
                               childrenOf[r.parentId].push(i);
                             }
                           });
-                          const knownIds = new Set(
-                            sessionRecipes.map((r) => r._id),
-                          );
+                          const knownIds = new Set(_sr2.map((r) => r._id));
                           const renderTabBtn = (idx, depth) => {
-                            const entry = sessionRecipes[idx];
+                            const entry = _sr2[idx];
                             const recipe = [...RECIPES, ...customRecipes].find(
                               (r) => r.id === entry.recipeId,
                             );
@@ -6568,7 +6704,7 @@ function App() {
                             const subCraftProducts = {};
                             (childrenOf[entry._id] || []).forEach(
                               (childIdx) => {
-                                const childEntry = sessionRecipes[childIdx];
+                                const childEntry = _sr2[childIdx];
                                 const childRecipe = [
                                   ...RECIPES,
                                   ...customRecipes,
@@ -6621,6 +6757,10 @@ function App() {
                               "button",
                               {
                                 key: entry._id,
+                                "data-tutorial":
+                                  idx === 1 && depth === 0
+                                    ? "tut-session-tab-switch"
+                                    : undefined,
                                 onClick: () => sessionSelectRecipeSlot(idx),
                                 draggable: isRoot,
                                 onDragStart: isRoot
@@ -6691,7 +6831,7 @@ function App() {
                             );
                           };
                           const renderGroup = (idx, depth) => {
-                            const entry = sessionRecipes[idx];
+                            const entry = _sr2[idx];
                             const children = childrenOf[entry._id] || [];
                             const btn = renderTabBtn(idx, depth);
                             if (children.length === 0) return btn;
@@ -6711,7 +6851,7 @@ function App() {
                                   /*#__PURE__*/ React.createElement(
                                     "div",
                                     {
-                                      key: sessionRecipes[ci]._id + "_row",
+                                      key: _sr2[ci]._id + "_row",
                                       className: "flex items-start gap-1",
                                     },
                                     /*#__PURE__*/ React.createElement(
@@ -6736,7 +6876,7 @@ function App() {
                               ),
                             );
                           };
-                          const roots = sessionRecipes.reduce((acc, r, i) => {
+                          const roots = _sr2.reduce((acc, r, i) => {
                             if (!r.parentId || !knownIds.has(r.parentId))
                               acc.push(i);
                             return acc;
@@ -6744,9 +6884,7 @@ function App() {
                           const dfsOrder = [];
                           const dfsVisit = (idx) => {
                             dfsOrder.push(idx);
-                            (childrenOf[sessionRecipes[idx]._id] || []).forEach(
-                              dfsVisit,
-                            );
+                            (childrenOf[_sr2[idx]._id] || []).forEach(dfsVisit);
                           };
                           roots.forEach(dfsVisit);
                           const clampedStep = Math.min(
@@ -6754,10 +6892,10 @@ function App() {
                             Math.max(0, dfsOrder.length - 1),
                           );
                           const getRoot = (idx) => {
-                            const e = sessionRecipes[idx];
+                            const e = _sr2[idx];
                             if (!e || !e.parentId || !knownIds.has(e.parentId))
                               return idx;
-                            const pi = sessionRecipes.findIndex(
+                            const pi = _sr2.findIndex(
                               (r) => r._id === e.parentId,
                             );
                             return pi >= 0 ? getRoot(pi) : idx;
@@ -6778,7 +6916,7 @@ function App() {
                               ? roots[currentRootPosInRoots + 1]
                               : null;
                           const ghostBtn = (ri, isPrev) => {
-                            const e = sessionRecipes[ri];
+                            const e = _sr2[ri];
                             const r = [...RECIPES, ...customRecipes].find(
                               (rec) => rec.id === e.recipeId,
                             );
@@ -6874,7 +7012,8 @@ function App() {
                       ),
                     ),
                     (() => {
-                      const entry = sessionRecipes[sessionActiveIdx];
+                      const _sr2 = tutMockSessionRecipes || sessionRecipes;
+                      const entry = _sr2[sessionActiveIdx];
                       const recipe = entry
                         ? [...RECIPES, ...customRecipes].find(
                             (r) => r.id === entry.recipeId,
@@ -6957,6 +7096,7 @@ function App() {
                               "div",
                               {
                                 className: "grid grid-cols-2 gap-3",
+                                "data-tutorial": "tut-session-agent",
                               },
                               sessionCauldron.map((slot, slotIdx) => {
                                 const lagerAmt = slot
@@ -7295,7 +7435,6 @@ function App() {
                                   "div",
                                   {
                                     className: "mb-3 mt-3",
-                                    "data-tutorial": "tut-session-agent",
                                   },
                                   (() => {
                                     const _ar = sessionAgent
@@ -8261,17 +8400,16 @@ function App() {
                           );
                         });
                         const focusDfsOrder = (() => {
-                          const kIds = new Set(
-                            sessionRecipes.map((r) => r._id),
-                          );
+                          const _sr2 = tutMockSessionRecipes || sessionRecipes;
+                          const kIds = new Set(_sr2.map((r) => r._id));
                           const co = {};
-                          sessionRecipes.forEach((r, i) => {
+                          _sr2.forEach((r, i) => {
                             if (r.parentId) {
                               if (!co[r.parentId]) co[r.parentId] = [];
                               co[r.parentId].push(i);
                             }
                           });
-                          const rts = sessionRecipes.reduce((acc, r, i) => {
+                          const rts = _sr2.reduce((acc, r, i) => {
                             if (!r.parentId || !kIds.has(r.parentId))
                               acc.push(i);
                             return acc;
@@ -8279,7 +8417,7 @@ function App() {
                           const ord = [];
                           const vis = (idx) => {
                             ord.push(idx);
-                            (co[sessionRecipes[idx]._id] || []).forEach(vis);
+                            (co[_sr2[idx]._id] || []).forEach(vis);
                           };
                           rts.forEach(vis);
                           return ord;
@@ -8301,6 +8439,7 @@ function App() {
                         return /*#__PURE__*/ React.createElement(
                           "button",
                           {
+                            "data-tutorial": "tut-session-next",
                             onClick: onNextClick,
                             disabled: !btnEnabled,
                             title: !btnEnabled
@@ -14558,6 +14697,7 @@ function App() {
       tutorialState &&
         /*#__PURE__*/ React.createElement(TutorialOverlay, {
           tutorialState,
+          focusMode,
           onNext: () =>
             setTutorialState((prev) => {
               if (!prev) return null;
