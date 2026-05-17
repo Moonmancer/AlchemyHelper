@@ -1169,6 +1169,7 @@ function App() {
   const [ocrState, setOcrState] = useState(null); // null | 'loading' | 'noimage' | 'error' | {found: N}
   const [ocrAmbiguous, setOcrAmbiguous] = useState(null); // null | { list: [{text, matches}], idx }
   const [ocrWorkerReady, setOcrWorkerReady] = useState(null); // null=not started | false=loading | true=ready
+  const [ocrLoadProgress, setOcrLoadProgress] = useState(null); // null | 0-100
   const ocrWorkerRef = React.useRef(null);
   const copyNavi = (npc, key) => {
     const parts = npc.navi.split(" ");
@@ -1216,16 +1217,30 @@ function App() {
         const workerAbsPath = new URL("./worker.min.js", document.baseURI).href;
         const langAbsPath = new URL(".", document.baseURI).href;
         const coreAbsPath = new URL(".", document.baseURI).href;
+        const _phaseOffsets = {
+          "loading tesseract core": 0,
+          "initializing tesseract": 25,
+          "loading language traineddata": 50,
+          "initializing api": 75,
+        };
         const worker = await window.Tesseract.createWorker("eng", 1, {
           workerPath: workerAbsPath,
           langPath: langAbsPath,
           corePath: coreAbsPath,
           cacheMethod: "write",
+          logger: (m) => {
+            const offset = _phaseOffsets[m.status];
+            if (offset !== undefined)
+              setOcrLoadProgress(
+                Math.min(99, Math.round(offset + m.progress * 25)),
+              );
+          },
         });
         await worker.setParameters({
           tessedit_pageseg_mode: "6",
         });
         ocrWorkerRef.current = worker;
+        setOcrLoadProgress(null);
         setOcrWorkerReady(true);
       } catch (e) {
         console.warn("[OCR preload] failed:", e);
@@ -1643,6 +1658,7 @@ function App() {
         return;
       }
       setSessionRecipes([]);
+      setSessionAgents([]);
       setOcrState("loading");
       runOcrRef.current(blob);
     };
@@ -1685,6 +1701,7 @@ function App() {
       if (ocrStateRef.current !== null) return;
       e.preventDefault();
       setSessionRecipes([]);
+      setSessionAgents([]);
       setOcrState("loading");
       runOcrRef.current(blob);
     };
@@ -5648,7 +5665,9 @@ function App() {
                                     : ocrState?.found === 0
                                       ? t("ocrNoMatch")
                                       : ocrWorkerReady === false
-                                        ? t("ocrPreparing")
+                                        ? ocrLoadProgress !== null
+                                          ? `${ocrLoadProgress}%`
+                                          : t("ocrPreparing")
                                         : t("ocrScan"),
                         ),
                       ),
@@ -6778,6 +6797,25 @@ function App() {
                                             r.product === sessionAgent.name,
                                         )
                                       : [];
+                                    const _al =
+                                      sessionAgent &&
+                                      Object.keys(parsedLager).length > 0
+                                        ? (parsedLager[sessionAgent.id] ?? 0)
+                                        : null;
+                                    const _isAgentSubcraftAdded =
+                                      _ar.length > 0 &&
+                                      sessionRecipes.some(
+                                        (r) =>
+                                          r.parentId ===
+                                            sessionRecipes[sessionActiveIdx]
+                                              ?._id &&
+                                          _ar.some((c) => c.id === r.recipeId),
+                                      );
+                                    const _agentBorderRed =
+                                      Object.keys(parsedLager).length > 0 &&
+                                      sessionAgent &&
+                                      _al === 0 &&
+                                      !_isAgentSubcraftAdded;
                                     return /*#__PURE__*/ React.createElement(
                                       React.Fragment,
                                       null,
@@ -6789,8 +6827,8 @@ function App() {
                                           {
                                             onClick: () =>
                                               setSessionAgentModalOpen(true),
-                                            className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all hover:shadow-md
-                                                                                            ${sessionAgent ? "border-indigo-200 dark:border-indigo-700/50 bg-indigo-50 dark:bg-indigo-900/30 hover:border-indigo-400" : "border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 hover:border-indigo-300"}`,
+                                            className: `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:shadow-md
+                                                                                            ${sessionAgent ? (_agentBorderRed ? "border-4 border-red-400 dark:border-red-600 bg-indigo-50 dark:bg-indigo-900/30" : "border-2 border-indigo-200 dark:border-indigo-700/50 bg-indigo-50 dark:bg-indigo-900/30 hover:border-indigo-400") : "border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 hover:border-indigo-300"}`,
                                           },
                                           sessionAgent
                                             ? /*#__PURE__*/ React.createElement(
@@ -7054,46 +7092,57 @@ function App() {
                                       ),
                                     ),
                                   ),
-                                  /*#__PURE__*/ React.createElement(
-                                    "div",
-                                    {
-                                      className:
-                                        "relative bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700 flex flex-col justify-center",
-                                    },
-                                    /*#__PURE__*/ React.createElement(
-                                      "span",
-                                      {
-                                        className:
-                                          "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1",
-                                      },
-                                      t("catalystLabel"),
-                                    ),
-                                    (() => {
-                                      const catName =
-                                        recipe.catalyst === "none"
-                                          ? t("noCatalyst")
-                                          : recipe.catalyst;
-                                      const catObj = CATALYSTS.find(
-                                        (c) =>
-                                          c.name === catName ||
-                                          c.name === recipe.catalyst,
+                                  (() => {
+                                    const catName =
+                                      recipe.catalyst === "none"
+                                        ? t("noCatalyst")
+                                        : recipe.catalyst;
+                                    const catObj = CATALYSTS.find(
+                                      (c) =>
+                                        c.name === catName ||
+                                        c.name === recipe.catalyst,
+                                    );
+                                    const _cr =
+                                      catObj && catObj.id !== "none"
+                                        ? [...RECIPES, ...customRecipes].filter(
+                                            (r) => r.product === catObj.name,
+                                          )
+                                        : [];
+                                    const _cl =
+                                      catObj &&
+                                      catObj.id !== "none" &&
+                                      Object.keys(parsedLager).length > 0
+                                        ? (parsedLager[catObj.id] ?? 0)
+                                        : null;
+                                    const _isSubcraftAdded =
+                                      _cr.length > 0 &&
+                                      sessionRecipes.some(
+                                        (r) =>
+                                          r.parentId ===
+                                            sessionRecipes[sessionActiveIdx]
+                                              ?._id &&
+                                          _cr.some((c) => c.id === r.recipeId),
                                       );
-                                      const _cr =
-                                        catObj && catObj.id !== "none"
-                                          ? [
-                                              ...RECIPES,
-                                              ...customRecipes,
-                                            ].filter(
-                                              (r) => r.product === catObj.name,
-                                            )
-                                          : [];
-                                      const _cl =
-                                        catObj &&
-                                        catObj.id !== "none" &&
-                                        Object.keys(parsedLager).length > 0
-                                          ? (parsedLager[catObj.id] ?? 0)
-                                          : null;
-                                      return /*#__PURE__*/ React.createElement(
+                                    const _catBorderRed =
+                                      Object.keys(parsedLager).length > 0 &&
+                                      catObj &&
+                                      catObj.id !== "none" &&
+                                      _cl === 0 &&
+                                      !_isSubcraftAdded;
+                                    return /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      {
+                                        className: `relative bg-slate-50 dark:bg-slate-900 rounded-xl p-3 flex flex-col justify-center ${_catBorderRed ? "border-4 border-red-400 dark:border-red-600" : "border border-slate-200 dark:border-slate-700"}`,
+                                      },
+                                      /*#__PURE__*/ React.createElement(
+                                        "span",
+                                        {
+                                          className:
+                                            "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1",
+                                        },
+                                        t("catalystLabel"),
+                                      ),
+                                      /*#__PURE__*/ React.createElement(
                                         React.Fragment,
                                         null,
                                         /*#__PURE__*/ React.createElement(
@@ -7186,9 +7235,9 @@ function App() {
                                               },
                                             ),
                                           ),
-                                      );
-                                    })(),
-                                  ),
+                                      ),
+                                    );
+                                  })(),
                                 ),
                                 /*#__PURE__*/ React.createElement(
                                   "div",
