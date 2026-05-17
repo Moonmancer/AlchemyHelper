@@ -130,4 +130,16 @@ window.SECRET_RECIPES = [
     minQuality: 0,
     catalyst: "Yellow Gemstone",
   },
+  {
+    id: 7137,
+    name: "Plant Bottle",
+    ingredients: ["Sand", "Wood", "Wood", "Food"],
+    mainIngredient: 40011,
+    potionBase: 645,
+    element: "Earth",
+    minScore: 300,
+    minQuality: 45,
+    catalyst: "Maya's Essence",
+    extraItemIds: [735],
+  },
 ];
