@@ -120,4 +120,14 @@ window.SECRET_RECIPES = [
     catalyst: "Mistress' Essence",
     extraItemIds: [735],
   },
+  {
+    id: 30404,
+    name: "Handcrafted Rod",
+    ingredients: ["Wood", "Wood", "Alloy", "Food"],
+    potionBase: 645,
+    element: "Water",
+    minScore: 0,
+    minQuality: 0,
+    catalyst: "Yellow Gemstone",
+  },
 ];
