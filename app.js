@@ -599,15 +599,23 @@ const TutorialOverlay = ({
         setRectExtra(null);
       }
     };
+    // Scroll target into view before measuring so that the element is not
+    // hidden below the scroll container (which would place the spotlight rect
+    // on top of the navigation bar instead of the actual element).
+    const elInit = document.querySelector(`[data-tutorial="${step.target}"]`);
+    if (elInit) elInit.scrollIntoView({ block: "nearest", behavior: "smooth" });
     update();
     // Retry after React re-renders from side-effect state updates (e.g. tab switch)
     const retry1 = setTimeout(update, 80);
     const retry2 = setTimeout(update, 250);
+    // Extra retry after smooth-scroll animation has settled (~300–400 ms)
+    const retry3 = setTimeout(update, 450);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
       clearTimeout(retry1);
       clearTimeout(retry2);
+      clearTimeout(retry3);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -1398,6 +1406,46 @@ function App() {
           target: "tut-session-catalyst",
           titleKey: "tutSession4Title",
           textKey: "tutSession4Text",
+        },
+        {
+          target: "tut-session-step3-materials",
+          titleKey: "tutStep3aTitle",
+          textKey: "tutStep3aText",
+        },
+        {
+          target: "tut-session-step3-split",
+          titleKey: "tutStep3bTitle",
+          textKey: "tutStep3bText",
+        },
+        {
+          target: "tut-session-step4-toggle",
+          titleKey: "tutStep4aTitle",
+          textKey: "tutStep4aText",
+        },
+        {
+          target: "tut-session-step4-content",
+          titleKey: "tutStep4bTitle",
+          textKey: "tutStep4bText",
+        },
+        {
+          target: "tut-session-step5-toggle",
+          titleKey: "tutStep5aTitle",
+          textKey: "tutStep5aText",
+        },
+        {
+          target: "tut-session-step5-npcs",
+          titleKey: "tutStep5bTitle",
+          textKey: "tutStep5bText",
+        },
+        {
+          target: "tut-session-step6-navi",
+          titleKey: "tutStep6aTitle",
+          textKey: "tutStep6aText",
+        },
+        {
+          target: "tut-session-step6-finish",
+          titleKey: "tutStep6bTitle",
+          textKey: "tutStep6bText",
         },
       ];
       const stepsMap = {
@@ -2995,6 +3043,92 @@ function App() {
     ) {
       setFocusMode(false);
     }
+    // Step 9 (catalyst): add a subcraft for Maya's Essence to demonstrate the + button
+    if (step.target === "tut-session-catalyst") {
+      setSessionRecipes((prev) => {
+        if (prev.some((r) => r.recipeId === 40081)) return prev;
+        const mainEntry = prev.find((r) => r._id === "tut_a");
+        if (!mainEntry) return prev;
+        return [
+          ...prev,
+          {
+            recipeId: 40081,
+            savedMaterials: [null, null, null, null],
+            _id: "tut_sub",
+            parentId: "tut_a",
+          },
+        ];
+      });
+    }
+    // Steps 3–6: navigate to the right session step with mock data
+    const _step36Targets = [
+      "tut-session-step3-materials",
+      "tut-session-step3-split",
+      "tut-session-step4-toggle",
+      "tut-session-step4-content",
+      "tut-session-step5-toggle",
+      "tut-session-step5-npcs",
+      "tut-session-step6-navi",
+      "tut-session-step6-finish",
+    ];
+    if (_step36Targets.includes(step.target)) {
+      setSessionOpen(true);
+      setFocusMode(false);
+      setSessionMaxStep(6);
+      setSessionRecipes((prev) =>
+        prev.length === 0
+          ? [40108, 40023, 40110, 40093, 40089].map((id) => ({
+              recipeId: id,
+              savedMaterials: [null, null, null, null],
+              _id: `tut_${id}`,
+              parentId: null,
+            }))
+          : prev,
+      );
+      setSessionActiveIdx(0);
+    }
+    if (
+      step.target === "tut-session-step3-materials" ||
+      step.target === "tut-session-step3-split"
+    ) {
+      setSessionStep(3);
+    }
+    if (
+      step.target === "tut-session-step4-toggle" ||
+      step.target === "tut-session-step4-content"
+    ) {
+      setSessionStep(4);
+      setSimplifiedCraftView(false);
+    }
+    if (
+      step.target === "tut-session-step5-toggle" ||
+      step.target === "tut-session-step5-npcs"
+    ) {
+      setSessionStep(5);
+      setSimplifiedDelivery(false);
+    }
+    if (
+      step.target === "tut-session-step6-navi" ||
+      step.target === "tut-session-step6-finish"
+    ) {
+      setSessionStep(6);
+      // Mock delivery so the navi area shows something
+      setSessionDelivery((prev) => {
+        if (prev.some(Boolean)) return prev;
+        return [
+          {
+            key: "sister",
+            name: "Sister",
+            delivery_text: "at the Church in Prontera",
+            navi: "prt_intr02 29 125",
+          },
+          null,
+          null,
+          null,
+          null,
+        ];
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutorialState?.step, tutorialState?.steps]);
 
@@ -3800,6 +3934,14 @@ function App() {
     "tut-session-recipe-bar",
     "tut-session-tab-switch",
     "tut-session-focus-grid",
+    "tut-session-step3-materials",
+    "tut-session-step3-split",
+    "tut-session-step4-toggle",
+    "tut-session-step4-content",
+    "tut-session-step5-toggle",
+    "tut-session-step5-npcs",
+    "tut-session-step6-navi",
+    "tut-session-step6-finish",
   ].includes(tutorialState?.steps?.[tutorialState?.step]?.target ?? "");
   const tutMockSessionRecipes = _tutMockSessionActive
     ? [40108, 40023, 40110, 40093, 40089].map((id) => ({
@@ -8627,6 +8769,7 @@ function App() {
                         "div",
                         {
                           className: "mb-4",
+                          "data-tutorial": "tut-session-step3-materials",
                         },
                         /*#__PURE__*/ React.createElement(
                           "div",
@@ -8646,6 +8789,7 @@ function App() {
                             {
                               className:
                                 "flex p-0.5 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700",
+                              "data-tutorial": "tut-session-step3-split",
                             },
                             [
                               ["none", t("splitModeNone")],
@@ -9280,7 +9424,10 @@ function App() {
                     null,
                     /*#__PURE__*/ React.createElement(
                       "div",
-                      { className: "px-6 pt-4 pb-2 flex-shrink-0" },
+                      {
+                        className: "px-6 pt-4 pb-2 flex-shrink-0",
+                        "data-tutorial": "tut-session-step4-toggle",
+                      },
                       /*#__PURE__*/ React.createElement(
                         "div",
                         { className: "flex items-center justify-between" },
@@ -9778,6 +9925,7 @@ function App() {
                             {
                               className:
                                 "flex-1 overflow-y-auto custom-scrollbar px-6 pb-4 min-h-0",
+                              "data-tutorial": "tut-session-step4-content",
                             },
                             /*#__PURE__*/ React.createElement(
                               "div",
@@ -10124,6 +10272,7 @@ function App() {
                           {
                             className:
                               "flex items-center gap-1.5 flex-shrink-0",
+                            "data-tutorial": "tut-session-step5-toggle",
                           },
                           /*#__PURE__*/ React.createElement(
                             "span",
@@ -10152,6 +10301,7 @@ function App() {
                           // Vereinfachte Ansicht: 2x2 Karten füllen die verfügbare Fläche
                           const selectedCount =
                             sessionDelivery.filter(Boolean).length;
+                          // data-tutorial is placed on the outer container below
                           const maxSelect = sessionRecipes.filter(
                             (r) => !r.parentId,
                           ).length;
@@ -10181,6 +10331,7 @@ function App() {
                             {
                               className:
                                 "flex-1 flex flex-col min-h-0 px-3 pb-3 pt-2",
+                              "data-tutorial": "tut-session-step5-npcs",
                             },
                             /*#__PURE__*/ React.createElement(
                               "div",
@@ -10558,6 +10709,7 @@ function App() {
                       {
                         className:
                           "flex-1 overflow-y-auto custom-scrollbar px-6 pb-4 min-h-0",
+                        "data-tutorial": "tut-session-step6-navi",
                       },
                       (() => {
                         const activeLocData = DELIVERY_LOCATIONS.map((loc) => {
@@ -10739,6 +10891,7 @@ function App() {
                       {
                         className:
                           "px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between flex-shrink-0",
+                        "data-tutorial": "tut-session-step6-finish",
                       },
                       /*#__PURE__*/ React.createElement(
                         "button",
