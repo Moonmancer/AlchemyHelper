@@ -933,7 +933,27 @@ function App() {
       return next;
     });
   };
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(() => {
+    try {
+      return localStorage.getItem("alchemySettingsOpen") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setSettingsOpenPersist = (val) => {
+    setSettingsOpen(val);
+    try {
+      localStorage.setItem("alchemySettingsOpen", val ? "1" : "0");
+    } catch {}
+  };
+  const [characterName, setCharacterName] = useState(() => {
+    try {
+      return localStorage.getItem("alchemyCharacterName") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [charDropdownOpen, setCharDropdownOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
   const showConfirm = React.useCallback(
     (message) =>
@@ -5131,7 +5151,7 @@ function App() {
             /*#__PURE__*/ React.createElement(
               "button",
               {
-                onClick: () => setSettingsOpen(true),
+                onClick: () => setSettingsOpenPersist(true),
                 className: `p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all w-[54px] flex items-center justify-center relative`,
                 title: t("settingsTitle"),
               },
@@ -5558,7 +5578,7 @@ function App() {
             {
               className:
                 "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4",
-              onClick: () => setSettingsOpen(false),
+              onClick: () => setSettingsOpenPersist(false),
             },
             /*#__PURE__*/ React.createElement(
               "div",
@@ -5623,7 +5643,7 @@ function App() {
                   /*#__PURE__*/ React.createElement(
                     "button",
                     {
-                      onClick: () => setSettingsOpen(false),
+                      onClick: () => setSettingsOpenPersist(false),
                       className:
                         "p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 dark:text-slate-400",
                     },
@@ -5638,6 +5658,100 @@ function App() {
                 {
                   className: "overflow-y-auto custom-scrollbar p-6 flex-1",
                 },
+                /*#__PURE__*/ React.createElement(
+                  "div",
+                  {
+                    className:
+                      "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 mb-4",
+                  },
+                  /*#__PURE__*/ React.createElement(
+                    "p",
+                    {
+                      className:
+                        "text-sm font-bold text-slate-700 dark:text-slate-200 mb-0.5",
+                    },
+                    t("characterNameLabel"),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "p",
+                    {
+                      className:
+                        "text-xs text-slate-500 dark:text-slate-400 mb-2",
+                    },
+                    t("characterNameHint"),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    { style: { position: "relative" } },
+                    /*#__PURE__*/ React.createElement("input", {
+                      type: "text",
+                      value: characterName,
+                      onChange: (e) => {
+                        setCharacterName(e.target.value);
+                        try {
+                          localStorage.setItem(
+                            "alchemyCharacterName",
+                            e.target.value,
+                          );
+                        } catch {}
+                        setCharDropdownOpen(true);
+                      },
+                      onFocus: () => setCharDropdownOpen(true),
+                      onBlur: () =>
+                        setTimeout(() => setCharDropdownOpen(false), 150),
+                      placeholder: t("characterNamePlaceholder"),
+                      className:
+                        "w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400",
+                    }),
+                    charDropdownOpen &&
+                      (() => {
+                        const query = characterName.trim().toLowerCase();
+                        const filtered = Object.keys(parsedLagerByChar)
+                          .filter(
+                            (name) =>
+                              !name.startsWith("Cart (") &&
+                              !name.startsWith("Storage (") &&
+                              name !== "Master Storage" &&
+                              (query === "" ||
+                                name.toLowerCase().includes(query)),
+                          )
+                          .sort((a, b) => a.localeCompare(b));
+                        if (filtered.length === 0) return null;
+                        return /*#__PURE__*/ React.createElement(
+                          "div",
+                          {
+                            className:
+                              "absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl overflow-y-auto custom-scrollbar",
+                            style: { maxHeight: "calc(5 * 2.125rem)" },
+                          },
+                          ...filtered.map((name) =>
+                            /*#__PURE__*/ React.createElement(
+                              "div",
+                              {
+                                key: name,
+                                onMouseDown: () => {
+                                  setCharacterName(name);
+                                  try {
+                                    localStorage.setItem(
+                                      "alchemyCharacterName",
+                                      name,
+                                    );
+                                  } catch {}
+                                  setCharDropdownOpen(false);
+                                },
+                                className: `px-3 py-1.5 text-sm cursor-pointer transition-colors ${
+                                  characterName === name
+                                    ? "bg-indigo-500 text-white font-bold"
+                                    : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                }`,
+                              },
+                              name,
+                            ),
+                          ),
+                        );
+                      })(),
+                  ),
+                ),
                 /*#__PURE__*/ React.createElement(
                   "div",
                   {

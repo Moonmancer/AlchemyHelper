@@ -87,6 +87,9 @@
     simplifiedCraftShort: "Vereinfacht",
     simplifiedCraftHint: "Zeigt beim Zubereiten ein Rezept nach dem anderen an.",
     simplifiedCraftCount: "Rezept {current} von {total}",
+    characterNameLabel: "Character-Name",
+    characterNameHint: "Dein Character-Name im Spiel.",
+    characterNamePlaceholder: "z. B. Maridwen",
     ignoreEmptyItemsLabel: "Leere Items ignorieren",
     ignoreEmptyItemsHint:
       "Beim automatischen Auswählen der Zutaten werden Items mit 0 Bestand im Lager übersprungen.",
@@ -364,6 +367,9 @@
     simplifiedCraftShort: "Simplified",
     simplifiedCraftHint: "In the Craft step, shows one recipe at a time.",
     simplifiedCraftCount: "Recipe {current} of {total}",
+    characterNameLabel: "Character Name",
+    characterNameHint: "Your character name in the game.",
+    characterNamePlaceholder: "e.g. Maridwen",
     ignoreEmptyItemsLabel: "Ignore Empty Items",
     ignoreEmptyItemsHint:
       "When auto-selecting ingredients, items with 0 stock in the lager are skipped.",
