@@ -3732,6 +3732,42 @@ function App() {
     dominantElement,
     customRank,
   ]);
+  const recipeMatchedSecret = useMemo(() => {
+    if (isCustomMode || !selectedRecipe) return null;
+    if (!selectedRecipe.id?.toString().startsWith("custom_")) return null;
+    if (
+      typeof window.SECRET_RECIPES === "undefined" ||
+      typeof window.EXTRA_ITEMS === "undefined"
+    )
+      return null;
+    return (
+      window.SECRET_RECIPES.find((secret) => {
+        if (
+          !secret.ingredients.every(
+            (type, i) => selectedRecipe.ingredients?.[i] === type,
+          )
+        )
+          return false;
+        if (
+          secret.mainIngredient !== undefined &&
+          selectedRecipe.savedMaterials?.[0] !== secret.mainIngredient
+        )
+          return false;
+        if (secret.agent !== undefined) {
+          const agentObj = AGENTS.find(
+            (a) => a.id === selectedRecipe.savedAgentId,
+          );
+          if (!agentObj || agentObj.name !== secret.agent) return false;
+        }
+        if (
+          secret.catalyst !== undefined &&
+          selectedRecipe.catalyst !== secret.catalyst
+        )
+          return false;
+        return true;
+      }) || null
+    );
+  }, [isCustomMode, selectedRecipe]);
   const effectiveRecipe =
     selectedRecipe ||
     (isCustomMode
@@ -8279,6 +8315,106 @@ function App() {
                                     );
                                   })(),
                                 ),
+                                typeof window.SECRET_RECIPES !== "undefined" &&
+                                  typeof window.EXTRA_ITEMS !== "undefined" &&
+                                  recipe?.id
+                                    ?.toString()
+                                    .startsWith("custom_") &&
+                                  (() => {
+                                    const secretMatch =
+                                      window.SECRET_RECIPES.find((secret) => {
+                                        if (
+                                          !secret.ingredients.every(
+                                            (type, i) =>
+                                              recipe.ingredients?.[i] === type,
+                                          )
+                                        )
+                                          return false;
+                                        if (
+                                          secret.mainIngredient !== undefined &&
+                                          sessionCauldron[0]?.id !==
+                                            secret.mainIngredient
+                                        )
+                                          return false;
+                                        if (
+                                          secret.agent !== undefined &&
+                                          sessionAgent?.name !== secret.agent
+                                        )
+                                          return false;
+                                        if (
+                                          secret.catalyst !== undefined &&
+                                          recipe.catalyst !== secret.catalyst
+                                        )
+                                          return false;
+                                        return true;
+                                      });
+                                    if (!secretMatch) return null;
+                                    const extraItems = (
+                                      secretMatch.extraItemIds || []
+                                    )
+                                      .map((id) =>
+                                        window.EXTRA_ITEMS.find(
+                                          (e) => e.id === id,
+                                        ),
+                                      )
+                                      .filter(Boolean);
+                                    if (extraItems.length === 0) return null;
+                                    return /*#__PURE__*/ React.createElement(
+                                      "div",
+                                      {
+                                        className:
+                                          "mb-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl flex-shrink-0",
+                                      },
+                                      /*#__PURE__*/ React.createElement(
+                                        "h3",
+                                        {
+                                          className:
+                                            "text-sm font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-2 mb-2",
+                                        },
+                                        /*#__PURE__*/ React.createElement("i", {
+                                          className:
+                                            "fa-solid fa-star text-yellow-500",
+                                        }),
+                                        " ",
+                                        t("extraItemsTitle"),
+                                      ),
+                                      /*#__PURE__*/ React.createElement(
+                                        "p",
+                                        {
+                                          className:
+                                            "text-xs text-yellow-700 dark:text-yellow-400 mb-2",
+                                        },
+                                        t("extraItemsDesc"),
+                                      ),
+                                      /*#__PURE__*/ React.createElement(
+                                        "div",
+                                        { className: "flex flex-col gap-1.5" },
+                                        extraItems.map((item) =>
+                                          /*#__PURE__*/ React.createElement(
+                                            "div",
+                                            {
+                                              key: item.id,
+                                              className:
+                                                "flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200",
+                                            },
+                                            /*#__PURE__*/ React.createElement(
+                                              ItemIcon,
+                                              {
+                                                id: item.id,
+                                                name: item.name,
+                                                size: "w-5 h-5 flex-shrink-0",
+                                              },
+                                            ),
+                                            /*#__PURE__*/ React.createElement(
+                                              "span",
+                                              { className: "font-semibold" },
+                                              item.name,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  })(),
                                 /*#__PURE__*/ React.createElement(
                                   "div",
                                   {
@@ -9530,7 +9666,7 @@ function App() {
                         typeof window.EXTRA_ITEMS !== "undefined" &&
                         foundSecrets.length > 0 &&
                         (() => {
-                          const matchedSecretIds = new Set();
+                          const matchedSecretCounts = new Map(); // secretId → count
                           sessionRecipes.forEach((entry, idx) => {
                             const saved = entry.savedMaterials;
                             if (!saved || saved.every((id) => id == null))
@@ -9565,22 +9701,44 @@ function App() {
                                 return;
                               // Catalyst-Check mit per-Rezept gespeichertem Wert
                               if (s.catalyst !== undefined) {
+                                const recipeObj = [
+                                  ...RECIPES,
+                                  ...customRecipes,
+                                ].find((r) => r.id === entry.recipeId);
+                                // Custom-Rezepte: Rezept-Definition ist autoritativ
+                                // Standard-Rezepte: per-Session gespeicherten Wert nutzen
                                 const recipeCatName =
-                                  sessionCatalysts[idx] ?? null;
+                                  recipeObj?.rank === "Custom"
+                                    ? recipeObj.catalyst
+                                    : (sessionCatalysts[idx] ?? null);
                                 if (recipeCatName !== s.catalyst) return;
                               }
-                              matchedSecretIds.add(s.id);
+                              matchedSecretCounts.set(
+                                s.id,
+                                (matchedSecretCounts.get(s.id) || 0) + 1,
+                              );
                             });
                           });
-                          const allExtraItems = [...matchedSecretIds]
-                            .flatMap(
-                              (sid) =>
-                                window.SECRET_RECIPES.find((s) => s.id === sid)
-                                  ?.extraItemIds || [],
-                            )
-                            .map((id) =>
-                              window.EXTRA_ITEMS.find((e) => e.id === id),
-                            )
+                          // Extra items mit Gesamtzahl aufaddieren
+                          const extraItemCounts = new Map(); // extraItemId → count
+                          for (const [sid, count] of matchedSecretCounts) {
+                            const secret = window.SECRET_RECIPES.find(
+                              (s) => s.id === sid,
+                            );
+                            (secret?.extraItemIds || []).forEach((eid) => {
+                              extraItemCounts.set(
+                                eid,
+                                (extraItemCounts.get(eid) || 0) + count,
+                              );
+                            });
+                          }
+                          const allExtraItems = [...extraItemCounts.entries()]
+                            .map(([id, count]) => {
+                              const item = window.EXTRA_ITEMS.find(
+                                (e) => e.id === id,
+                              );
+                              return item ? { ...item, count } : null;
+                            })
                             .filter(Boolean);
                           if (allExtraItems.length === 0) return null;
                           return /*#__PURE__*/ React.createElement(
@@ -9630,6 +9788,16 @@ function App() {
                                     },
                                     item.name,
                                   ),
+                                  item.count > 1 &&
+                                    /*#__PURE__*/ React.createElement(
+                                      "span",
+                                      {
+                                        className:
+                                          "text-xs font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/40 px-1.5 py-0.5 rounded-lg",
+                                      },
+                                      "\u00d7",
+                                      item.count,
+                                    ),
                                   /*#__PURE__*/ React.createElement(
                                     "span",
                                     {
@@ -12928,70 +13096,6 @@ function App() {
                       }),
                     ),
                   ),
-                  typeof window.SECRET_RECIPES !== "undefined" &&
-                    typeof window.EXTRA_ITEMS !== "undefined" &&
-                    currentMatchedSecret !== null &&
-                    (() => {
-                      const allExtraItems = (
-                        currentMatchedSecret.extraItemIds || []
-                      )
-                        .map((id) =>
-                          window.EXTRA_ITEMS.find((e) => e.id === id),
-                        )
-                        .filter(Boolean);
-                      if (allExtraItems.length === 0) return null;
-                      return /*#__PURE__*/ React.createElement(
-                        "div",
-                        {
-                          className:
-                            "mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl flex-shrink-0",
-                        },
-                        /*#__PURE__*/ React.createElement(
-                          "h3",
-                          {
-                            className:
-                              "text-sm font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-2 mb-2",
-                          },
-                          /*#__PURE__*/ React.createElement("i", {
-                            className: "fa-solid fa-star text-yellow-500",
-                          }),
-                          " ",
-                          t("extraItemsTitle"),
-                        ),
-                        /*#__PURE__*/ React.createElement(
-                          "p",
-                          {
-                            className:
-                              "text-xs text-yellow-700 dark:text-yellow-400 mb-2",
-                          },
-                          t("extraItemsDesc"),
-                        ),
-                        /*#__PURE__*/ React.createElement(
-                          "div",
-                          { className: "flex flex-col gap-1.5" },
-                          allExtraItems.map((item) =>
-                            /*#__PURE__*/ React.createElement(
-                              "div",
-                              {
-                                key: item.id,
-                                className:
-                                  "flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200",
-                              },
-                              /*#__PURE__*/ React.createElement(ItemIcon, {
-                                id: item.id,
-                                name: item.name,
-                                size: "w-5 h-5 flex-shrink-0",
-                              }),
-                              /*#__PURE__*/ React.createElement(
-                                "span",
-                                { className: "font-semibold" },
-                                item.name,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    })(),
                 ),
               cartOpen &&
                 /*#__PURE__*/ React.createElement(
@@ -14702,6 +14806,73 @@ function App() {
                           ),
                     ),
                   ),
+                  typeof window.SECRET_RECIPES !== "undefined" &&
+                    typeof window.EXTRA_ITEMS !== "undefined" &&
+                    (isCustomMode
+                      ? currentMatchedSecret
+                      : recipeMatchedSecret) !== null &&
+                    (() => {
+                      const activeSecret = isCustomMode
+                        ? currentMatchedSecret
+                        : recipeMatchedSecret;
+                      const extraItems = (activeSecret.extraItemIds || [])
+                        .map((id) =>
+                          window.EXTRA_ITEMS.find((e) => e.id === id),
+                        )
+                        .filter(Boolean);
+                      if (extraItems.length === 0) return null;
+                      return /*#__PURE__*/ React.createElement(
+                        "div",
+                        {
+                          className:
+                            "mb-5 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl flex-shrink-0",
+                        },
+                        /*#__PURE__*/ React.createElement(
+                          "h3",
+                          {
+                            className:
+                              "text-sm font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-2 mb-2",
+                          },
+                          /*#__PURE__*/ React.createElement("i", {
+                            className: "fa-solid fa-star text-yellow-500",
+                          }),
+                          " ",
+                          t("extraItemsTitle"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "p",
+                          {
+                            className:
+                              "text-xs text-yellow-700 dark:text-yellow-400 mb-2",
+                          },
+                          t("extraItemsDesc"),
+                        ),
+                        /*#__PURE__*/ React.createElement(
+                          "div",
+                          { className: "flex flex-col gap-1.5" },
+                          extraItems.map((item) =>
+                            /*#__PURE__*/ React.createElement(
+                              "div",
+                              {
+                                key: item.id,
+                                className:
+                                  "flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200",
+                              },
+                              /*#__PURE__*/ React.createElement(ItemIcon, {
+                                id: item.id,
+                                name: item.name,
+                                size: "w-5 h-5 flex-shrink-0",
+                              }),
+                              /*#__PURE__*/ React.createElement(
+                                "span",
+                                { className: "font-semibold" },
+                                item.name,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    })(),
                   /*#__PURE__*/ React.createElement(
                     "div",
                     null,
