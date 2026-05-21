@@ -970,6 +970,15 @@ function App() {
     }
   });
   const [charDropdownOpen, setCharDropdownOpen] = useState(false);
+  const [characterSlot, setCharacterSlot] = useState(() => {
+    try {
+      return localStorage.getItem("alchemyCharacterSlot") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [charSlotDropdownOpen, setCharSlotDropdownOpen] = useState(false);
+  const charSlotInputRef = React.useRef(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const showConfirm = React.useCallback(
     (message) =>
@@ -2263,8 +2272,6 @@ function App() {
       if (!src) return "Master Storage";
       const s = src.trim();
       if (!s || s === "Master Storage") return "Master Storage";
-      const m = /^Inventory\s+\(([^:)]+):/.exec(s);
-      if (m) return m[1].trim();
       return s;
     };
     // Regex für das Format: "<id> <name> <qty> [None] None <source>"
@@ -2335,23 +2342,41 @@ function App() {
   };
   const filteredLager = React.useMemo(() => {
     if (!lagerFilterEnabled || !characterName.trim()) return parsedLager;
-    const charKey = characterName.trim();
-    const extractChar = (key) => {
+    const accountPart = characterName.trim();
+    const charPart = characterSlot.trim() || null;
+    const extractAccount = (key) => {
       if (key === "Master Storage") return null;
-      const m = /^(?:Cart|Storage|Inventory)\s+\(([^:)]+):/.exec(key);
+      const m = /^(?:Cart|Storage|Inventory)\s+\(([^:)]+)/.exec(key);
+      return m ? m[1].trim() : null;
+    };
+    const extractCharFromKey = (key) => {
+      const m = /^(?:Cart|Storage|Inventory)\s+\([^:]+:\s*([^)]+)\)/.exec(key);
       if (m) return m[1].trim();
-      return key;
+      const ci = key.indexOf(": ");
+      return ci > 0 ? key.slice(ci + 2) : null;
     };
     const result = {};
     Object.entries(parsedLagerByChar).forEach(([key, items]) => {
-      if (key === "Master Storage" || extractChar(key) === charKey) {
+      if (key === "Master Storage") {
         Object.entries(items).forEach(([id, qty]) => {
           result[id] = (result[id] || 0) + qty;
         });
+        return;
       }
+      if (extractAccount(key) !== accountPart) return;
+      if (charPart && extractCharFromKey(key) !== charPart) return;
+      Object.entries(items).forEach(([id, qty]) => {
+        result[id] = (result[id] || 0) + qty;
+      });
     });
     return result;
-  }, [lagerFilterEnabled, characterName, parsedLager, parsedLagerByChar]);
+  }, [
+    lagerFilterEnabled,
+    characterName,
+    characterSlot,
+    parsedLager,
+    parsedLagerByChar,
+  ]);
   const sessionAllMaterials = React.useMemo(() => {
     const matNeeded = {};
     sessionRecipes.forEach(({ recipeId, savedMaterials }) => {
@@ -5765,7 +5790,7 @@ function App() {
                 /*#__PURE__*/ React.createElement(
                   "div",
                   {
-                    className: "grid grid-cols-2 gap-3 mb-4",
+                    className: "grid grid-cols-3 gap-3 mb-4",
                   },
                   /*#__PURE__*/ React.createElement(
                     "div",
@@ -5795,6 +5820,7 @@ function App() {
                       /*#__PURE__*/ React.createElement("input", {
                         type: "text",
                         value: characterName,
+                        maxLength: 23,
                         onChange: (e) => {
                           setCharacterName(e.target.value);
                           try {
@@ -5826,6 +5852,13 @@ function App() {
                                   "",
                                 );
                               } catch {}
+                              setCharacterSlot("");
+                              try {
+                                localStorage.setItem(
+                                  "alchemyCharacterSlot",
+                                  "",
+                                );
+                              } catch {}
                               setCharDropdownOpen(false);
                             },
                             className:
@@ -5839,17 +5872,26 @@ function App() {
                       charDropdownOpen &&
                         (() => {
                           const query = characterName.trim().toLowerCase();
-                          const filtered = Object.keys(parsedLagerByChar)
+                          const accounts = [
+                            ...new Set(
+                              Object.keys(parsedLagerByChar)
+                                .filter((k) => k !== "Master Storage")
+                                .map((k) => {
+                                  const m =
+                                    /^(?:Cart|Storage|Inventory)\s+\(([^:)]+)/.exec(
+                                      k,
+                                    );
+                                  return m ? m[1].trim() : null;
+                                })
+                                .filter(Boolean),
+                            ),
+                          ]
                             .filter(
-                              (name) =>
-                                !name.startsWith("Cart (") &&
-                                !name.startsWith("Storage (") &&
-                                name !== "Master Storage" &&
-                                (query === "" ||
-                                  name.toLowerCase().includes(query)),
+                              (a) =>
+                                query === "" || a.toLowerCase().includes(query),
                             )
                             .sort((a, b) => a.localeCompare(b));
-                          if (filtered.length === 0) return null;
+                          if (accounts.length === 0) return null;
                           return /*#__PURE__*/ React.createElement(
                             "div",
                             {
@@ -5857,7 +5899,7 @@ function App() {
                                 "absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl overflow-y-auto custom-scrollbar",
                               style: { maxHeight: "calc(5 * 2.125rem)" },
                             },
-                            ...filtered.map((name) =>
+                            ...accounts.map((name) =>
                               /*#__PURE__*/ React.createElement(
                                 "div",
                                 {
@@ -5871,9 +5913,194 @@ function App() {
                                       );
                                     } catch {}
                                     setCharDropdownOpen(false);
+                                    const autoChars = [
+                                      ...new Set(
+                                        Object.keys(parsedLagerByChar)
+                                          .filter((k) => {
+                                            if (k === "Master Storage")
+                                              return false;
+                                            const am =
+                                              /^(?:Cart|Storage|Inventory)\s+\(([^:)]+)/.exec(
+                                                k,
+                                              );
+                                            return am && am[1].trim() === name;
+                                          })
+                                          .map((k) => {
+                                            const cm =
+                                              /^(?:Cart|Storage|Inventory)\s+\([^:]+:\s*([^)]+)\)/.exec(
+                                                k,
+                                              );
+                                            return cm ? cm[1].trim() : null;
+                                          })
+                                          .filter(Boolean),
+                                      ),
+                                    ];
+                                    if (autoChars.length === 1) {
+                                      setCharacterSlot(autoChars[0]);
+                                      try {
+                                        localStorage.setItem(
+                                          "alchemyCharacterSlot",
+                                          autoChars[0],
+                                        );
+                                      } catch {}
+                                    } else if (
+                                      !autoChars.includes(characterSlot)
+                                    ) {
+                                      setCharacterSlot("");
+                                      try {
+                                        localStorage.setItem(
+                                          "alchemyCharacterSlot",
+                                          "",
+                                        );
+                                      } catch {}
+                                      setTimeout(() => {
+                                        if (charSlotInputRef.current)
+                                          charSlotInputRef.current.focus();
+                                      }, 0);
+                                    }
                                   },
                                   className: `px-4 py-2 text-sm cursor-pointer transition-colors ${
                                     characterName === name
+                                      ? "bg-indigo-500 text-white font-bold"
+                                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                  }`,
+                                },
+                                name,
+                              ),
+                            ),
+                          );
+                        })(),
+                    ),
+                  ),
+                  /*#__PURE__*/ React.createElement(
+                    "div",
+                    {
+                      className:
+                        "p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700",
+                    },
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-sm font-bold text-slate-700 dark:text-slate-200 mb-0.5",
+                      },
+                      t("characterSlotLabel"),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "p",
+                      {
+                        className:
+                          "text-xs text-slate-500 dark:text-slate-400 mb-2",
+                      },
+                      t("characterSlotHint"),
+                    ),
+                    /*#__PURE__*/ React.createElement(
+                      "div",
+                      { style: { position: "relative" } },
+                      /*#__PURE__*/ React.createElement("input", {
+                        ref: charSlotInputRef,
+                        type: "text",
+                        value: characterSlot,
+                        maxLength: 23,
+                        onChange: (e) => {
+                          setCharacterSlot(e.target.value);
+                          try {
+                            localStorage.setItem(
+                              "alchemyCharacterSlot",
+                              e.target.value,
+                            );
+                          } catch {}
+                          setCharSlotDropdownOpen(true);
+                        },
+                        onFocus: () => setCharSlotDropdownOpen(true),
+                        onBlur: () =>
+                          setTimeout(() => setCharSlotDropdownOpen(false), 150),
+                        placeholder: t("characterSlotPlaceholder"),
+                        style: { paddingLeft: "1rem" },
+                        className:
+                          "w-full pr-8 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400",
+                      }),
+                      characterSlot &&
+                        /*#__PURE__*/ React.createElement(
+                          "button",
+                          {
+                            onMouseDown: (e) => {
+                              e.preventDefault();
+                              setCharacterSlot("");
+                              try {
+                                localStorage.setItem(
+                                  "alchemyCharacterSlot",
+                                  "",
+                                );
+                              } catch {}
+                              setCharSlotDropdownOpen(true);
+                            },
+                            className:
+                              "absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200",
+                            style: { lineHeight: 1 },
+                          },
+                          /*#__PURE__*/ React.createElement("i", {
+                            className: "fa-solid fa-xmark text-xs",
+                          }),
+                        ),
+                      charSlotDropdownOpen &&
+                        (() => {
+                          const query = characterSlot.trim().toLowerCase();
+                          const chars = [
+                            ...new Set(
+                              Object.keys(parsedLagerByChar)
+                                .filter((k) => {
+                                  if (k === "Master Storage") return false;
+                                  const accM =
+                                    /^(?:Cart|Storage|Inventory)\s+\(([^:)]+)/.exec(
+                                      k,
+                                    );
+                                  if (!accM) return false;
+                                  if (!characterName.trim()) return true;
+                                  return (
+                                    accM[1].trim() === characterName.trim()
+                                  );
+                                })
+                                .map((k) => {
+                                  const m =
+                                    /^(?:Cart|Storage|Inventory)\s+\([^:]+:\s*([^)]+)\)/.exec(
+                                      k,
+                                    );
+                                  return m ? m[1].trim() : null;
+                                })
+                                .filter(Boolean),
+                            ),
+                          ]
+                            .filter(
+                              (c) =>
+                                query === "" || c.toLowerCase().includes(query),
+                            )
+                            .sort((a, b) => a.localeCompare(b));
+                          if (chars.length === 0) return null;
+                          return /*#__PURE__*/ React.createElement(
+                            "div",
+                            {
+                              className:
+                                "absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl overflow-y-auto custom-scrollbar",
+                              style: { maxHeight: "calc(5 * 2.125rem)" },
+                            },
+                            ...chars.map((name) =>
+                              /*#__PURE__*/ React.createElement(
+                                "div",
+                                {
+                                  key: name,
+                                  onMouseDown: () => {
+                                    setCharacterSlot(name);
+                                    try {
+                                      localStorage.setItem(
+                                        "alchemyCharacterSlot",
+                                        name,
+                                      );
+                                    } catch {}
+                                    setCharSlotDropdownOpen(false);
+                                  },
+                                  className: `px-4 py-2 text-sm cursor-pointer transition-colors ${
+                                    characterSlot === name
                                       ? "bg-indigo-500 text-white font-bold"
                                       : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                                   }`,
