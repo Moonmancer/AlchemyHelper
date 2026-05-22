@@ -302,11 +302,11 @@ window.findBestIngredientsWithFallback = (
 };
 
 window.TYPE_ICONS = {
-  Alloy: 1010,
   Food: 517,
-  Sand: 7043,
   Wood: 1019,
+  Sand: 7043,
   Beast: 919,
+  Alloy: 1010,
   Magic: 7117,
 };
 
@@ -4264,7 +4264,17 @@ function App() {
                   t("noType"),
                 ),
                 [...new Set(MATERIALS.map((m) => m.type))]
-                  .sort()
+                  .sort((a, b) => {
+                    const order = [
+                      "Food",
+                      "Wood",
+                      "Sand",
+                      "Beast",
+                      "Alloy",
+                      "Magic",
+                    ];
+                    return order.indexOf(a) - order.indexOf(b);
+                  })
                   .map((type) => {
                     const isActive = customSlotTypes[typePickerSlot] === type;
                     return /*#__PURE__*/ React.createElement(
@@ -6581,7 +6591,7 @@ function App() {
                     },
                     t("ingredientVisibilityHint"),
                   ),
-                  ["Alloy", "Food", "Sand", "Wood", "Beast", "Magic"].map(
+                  ["Food", "Wood", "Sand", "Beast", "Alloy", "Magic"].map(
                     (type) => {
                       const typeItems = MATERIALS.filter(
                         (m) => m.type === type,
@@ -13740,9 +13750,9 @@ function App() {
                                             "Food",
                                             "Wood",
                                             "Sand",
-                                            "Magic",
                                             "Beast",
                                             "Alloy",
+                                            "Magic",
                                           ].includes(mat?.type) &&
                                             /*#__PURE__*/ React.createElement(
                                               "span",
@@ -14324,9 +14334,9 @@ function App() {
                                       "Food",
                                       "Wood",
                                       "Sand",
-                                      "Magic",
                                       "Beast",
                                       "Alloy",
+                                      "Magic",
                                     ].includes(mat?.type) &&
                                       /*#__PURE__*/ React.createElement(
                                         "span",
