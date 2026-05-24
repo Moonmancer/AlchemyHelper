@@ -2102,6 +2102,9 @@ function App() {
             text: name,
             matches: unique.map((m) => m.recipe),
           });
+          // Prevent a cleaner OCR reading of the same recipe from filling
+          // the queue slot before the ambiguous dialog is resolved.
+          unique.forEach((m) => resolvedRecipeIds.add(m.recipe.id));
         }
       });
       setOcrState({
