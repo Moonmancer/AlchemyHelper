@@ -2013,8 +2013,15 @@ function App() {
           } else if (rNorm.includes(nNorm) || nNorm.includes(rNorm)) {
             score = Math.abs(rNorm.length - nNorm.length) * 0.5;
           } else if (nWords.length > 0 && rWords.length > 0) {
-            const intersection = nWords.filter((w) =>
-              rWords.includes(w),
+            const fuzzyWordEq = (w1, w2) => {
+              if (w1 === w2) return true;
+              const maxWLen = Math.max(w1.length, w2.length);
+              return (
+                levenshtein(w1, w2) <= Math.max(1, Math.floor(maxWLen * 0.25))
+              );
+            };
+            const intersection = nWords.filter((nw) =>
+              rWords.some((rw) => fuzzyWordEq(nw, rw)),
             ).length;
             const wordScore =
               intersection / Math.max(nWords.length, rWords.length);
