@@ -149,7 +149,7 @@ window.SECRET_RECIPES = [
     potionBase: 657,
     element: "Earth",
     minScore: 100,
-    minQuality: 90,
+    minQuality: 70,
     extraItemIds: [12704],
   },
   {
@@ -159,7 +159,7 @@ window.SECRET_RECIPES = [
     potionBase: 657,
     element: "Earth",
     minScore: 100,
-    minQuality: 90,
+    minQuality: 70,
     extraItemIds: [12704],
   },
   {
