@@ -13,4 +13,5 @@ window.EXTRA_ITEMS = [
   { id: 522, name: "Mastela Fruit", type: "Extra" },
   { id: 735, name: "Chung Jah", type: "Extra" },
   { id: 12704, name: "Elixir of Life", type: "Extra" },
+  { id: 714, name: "Emperium", type: "Extra" },
 ];

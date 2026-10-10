@@ -162,4 +162,17 @@ window.SECRET_RECIPES = [
     minQuality: 90,
     extraItemIds: [12704],
   },
+  {
+    id: 40122,
+    name: "Fausse Image",
+    ingredients: ["Magic", "Sand", "Alloy", "Beast"],
+    mainIngredient: 40021,
+    potionBase: 610,
+    element: "Earth",
+    minScore: 0,
+    minQuality: 100,
+    catalyst: "Ifrit's Essence",
+    agent: "Nature Maxima",
+    extraItemIds: [714],
+  },
 ];
